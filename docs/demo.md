@@ -12,7 +12,7 @@ We developed a marketing analytics platform designed to [briefly state the probl
 
 ## Problem Definition
 
-Many businesses struggle with *[state the marketing problem]*. Our solution provides *[short summary of value proposition]*.
+Many businesses struggle with [state the marketing problem]. Our solution provides [short summary of value proposition].
 
 ---
 
@@ -22,11 +22,11 @@ Many businesses struggle with *[state the marketing problem]*. Our solution prov
 
 **Microservice Components:**
 
-- **Frontend:** Streamlit – displays model outputs and visualizations
-- **Backend:** FastAPI – exposes endpoints to interact with the model and database
-- **Database:** PostgreSQL – stores marketing and prediction data
-- **Model:** [e.g., Logistic Regression, XGBoost] – used for prediction
-- **Documentation:** GitHub + this README
+- Frontend: Streamlit – displays model outputs and visualizations
+- Backend: FastAPI – exposes endpoints to interact with the model and database
+- Database: PostgreSQL – stores marketing and prediction data
+- Model: [e.g., Logistic Regression, XGBoost] – used for prediction
+- Documentation: GitHub + this README
 
 ---
 
@@ -65,12 +65,17 @@ Many businesses struggle with *[state the marketing problem]*. Our solution prov
 - Model type, performance metrics
 - Example prediction output
 
-### 5. Database (by DB Dev)
+### 5. Database (by PM)
 
 - Show schema design
 - Example data insert/query
 
+### Q&A Session
+
+---
+
 ## Final Notes
 
 - All components of the project have been integrated and tested during the live demo.
-- Ensure **final GitHub push is completed by December 11, 2025, 23:59**.
+- Ensure final GitHub push is completed by December 11, 2025, 23:59.
+
