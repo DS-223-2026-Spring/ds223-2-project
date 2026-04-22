@@ -1,5 +1,7 @@
 # DS 223 Marketing Analytics – Group Project Demo
 
+- [Home](index.md) · [API](api.md) · [ETL notes](etl.md)
+
 ## Product Overview
 
 **Product Name:** [Your Product Name]  
@@ -18,7 +20,7 @@ Many businesses struggle with [state the marketing problem]. Our solution provid
 
 ## Solution Architecture
 
-![Your Product Schema](link_to_architecture_diagram_if_any)
+![Star schema (example)](imgs/star_schema.png)
 
 **Microservice Components:**
 

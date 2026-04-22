@@ -1,4 +1,4 @@
-# Dockerized ETL, PostgreSQL, pgAdmin, Backend Setup, Streamlit Setup
+# Dockerized PostgreSQL, pgAdmin, FastAPI, and Streamlit
 
 ## Branches
 
@@ -14,15 +14,12 @@ This repository contains the following branches:
 - **gh-pages:** Deploying the documentation.
 - **jupyter-notebook**: Contains the Jupyter Notebook container setup.
 
-## Remote Connectore
+## Dev Container (optional)
 
-1. Install `dev container` extension in VS code. 
-2. ![alt text](image-2.png)
-3. run `docker compose up --build` to build the containers.
-4. Click on the Dev Container icon in the bottom left corner of VS code.
-5. ![alt text](image.png)
-6. Select a folder (if in `root` ../ or `app` or `api`).
-7. ![alt text](image-1.png)
+1. Install the **Dev Containers** extension in VS Code.
+2. From the repository root, run `docker compose up --build` to build the images.
+3. Open the **Dev Containers** command palette action and pick **Reopen in Container** when you want a containerized dev environment.
+4. Select a folder to work in: repository root, `app/`, or `api/`, depending on your role.
 
 
 
@@ -37,16 +34,22 @@ Before getting started, ensure you have the following prerequisites installed:
 1. Clone the repository:
    ```bash
    git clone https://github.com/hovhannisyan91/pythonmicroservicedesign.git
+   cd pythonmicroservicedesign
    ```
 
-2. Build and start the Docker containers:
+2. Create a local environment file (copy the example, then adjust values for your machine if needed):
    ```bash
-   docker-compose up --build
+   cp .env.example .env
+   ```
+
+3. Build and start the Docker containers from the repository root:
+   ```bash
+   docker compose up --build
    ```
 
 ## Access the Application
 
-After running `docker-compose up --build`, you can access each component of the application at the following URLs:
+After running `docker compose up --build`, you can access each component of the application at the following URLs:
 
 
 - **Streamlit Frontend:** http://localhost:8501 The main interface for managing employees, built with Streamlit. Use this to add, view, update, and delete employee records.
@@ -59,7 +62,7 @@ After running `docker-compose up --build`, you can access each component of the 
   - **Email**: Value of `PGADMIN_EMAIL` in your `.env` file
   - **Password**: Value of `PGADMIN_PASSWORD` in your `.env` file
 
-> Note: Ensure Docker is running, and all environment variables in `.env` are correctly configured before accessing these URLs.
+> Note: Ensure Docker is running, and you have created `.env` from `.env.example` (see Installation) with values that match your setup.
 
 
 
@@ -71,9 +74,9 @@ Here’s an overview of the project’s file structure:
 .
 ├── LICENSE
 ├── README.md
-├── .github
-      # Dockerfile for FastAPI container
-├── .env                # Environment variables
+├── .github/            # CI workflows
+├── .env.example        # Example environment (copy to `.env`)
+├── .env                # Your local environment (not committed; create from `.env.example`)
 ├── docker-compose.yml  # Docker Compose configuration
 ├── api                 # FastAPI backend folder
 │   ├── Dockerfile      # Dockerfile for FastAPI container
@@ -91,18 +94,23 @@ Here’s an overview of the project’s file structure:
 │   │   ├── page1.py
 │   │   └── page2.py
 │   └── requirements.txt #frontend dependancies
+├── mkdocs.yaml         # MkDocs site config (run `mkdocs serve` from repo root)
 └── docs                # Documentation assets
+    ├── requirements.txt # pip deps for building docs (MkDocs, theme, mkdocstrings)
     ├── imgs            # Image assets for documentation
-    └── index.html      # Documentation home page
+    ├── index.md        # MkDocs home page (builds to `site/index.html`)
+    ├── index.html      # Optional static page (open locally; excluded from MkDocs output)
+    └── *.md              # Other pages (API, app, ETL, demo, …)
 ```
 
-## Docker 
+## Docker
 
-This repository sets up a Docker environment with three main services:
+`docker compose` brings up the following services:
 
-1. **PostgreSQL:** for data storage
-2. **pgAdmin:** for database management and visualization
-3. **ETL:** service for Extract, Transform, Load operations using Python
+1. **PostgreSQL** – primary database
+2. **pgAdmin** – database administration UI
+3. **api** – FastAPI backend (`./api`, image built from `api/Dockerfile`)
+4. **app** – Streamlit frontend (`./app`, image built from `app/Dockerfile`)
 
 ## Prerequisites
 
@@ -126,34 +134,26 @@ Before running this setup, ensure Docker and Docker Compose are installed on you
 Create a `.env` file in the root directory to define your environment variables as below:
 
 ```env
-# PostgreSQL configuration
+# Used by the API container (SQLAlchemy connection string)
+DATABASE_URL=postgresql+psycopg2://<user>:<password>@db:5432/<database>
+
+# PostgreSQL (Compose `db` service)
 DB_USER=<your_database_user>
 DB_PASSWORD=<your_database_password>
 DB_NAME=<your_database_name>
 
-# pgAdmin configuration
+# pgAdmin
 PGADMIN_EMAIL=admin@admin.com
 PGADMIN_PASSWORD=admin
 ```
 
+Copy `.env.example` to `.env` and adjust; do not commit real secrets.
 
 
-## ETL
 
-### Schema Design
+## Data modeling and ETL (reference)
 
-We will try to create below schema:
-
-![Star Schema](docs/imgs/star_schema.png)
-
-### ETL
-
-In `models.py`, we have used `sqlalchemy` package, which allows map python objects with SQL objects.
-
-By running `etl.py` following objects will be created:
-    - sql tables 
-    - the data sets will store in `data\` folder
-    - the csv files will be loaded into DB
+Schema diagrams and ETL notes for the course live under `docs/` (for example `docs/etl.md` and `docs/imgs/star_schema.png`). The repository root is organized around the Dockerized **db**, **api**, and **app** services; a separate batch ETL service is not part of the default Compose file so orchestration and data-science work can be added in a way that fits your team’s workflow.
 
 ## API
 
@@ -165,7 +165,7 @@ By running `etl.py` following objects will be created:
 - **Update Salary**: Update the salary of an existing employee by providing their ID and the new salary.
 - **Delete Employee**: Remove an employee record from the system using their ID.
 
-In this folder you can find the codes that connects endpoints with the DB you can insert, delete, updated, and check employee with there id's.
+The FastAPI app under `api/` connects HTTP endpoints to PostgreSQL; you can create, read, update, and delete employees by id.
 
 ### Requests
 
@@ -191,7 +191,7 @@ To Open the web app visit: [here](http://localhost:8501/)
 # Dockerfile
 
 # pull the official docker image
-FROM python:3.10-slim-bullseye
+FROM python:3.12-slim-bullseye
 
 RUN apt-get update && apt-get install -y \
     build-essential libpq-dev libfreetype6-dev libpng-dev libjpeg-dev \
@@ -233,79 +233,30 @@ CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.headless=true
       - api
 ```
 
-## Mkdocs
+## Documentation in this repo
 
-Mkdocs documents your code and puts it in html format.
+1. Install [MkDocs](https://www.mkdocs.org/) tooling (from the repository root):
+   ```bash
+   pip install -r docs/requirements.txt
+   ```
+2. Live preview:
+   ```bash
+   mkdocs serve
+   ```
+   Open the URL shown in the terminal (usually `http://127.0.0.1:8000`).
+3. Static build output is written to **`site/`** (ignored by git):
+   ```bash
+   mkdocs build
+   ```
 
-### Prerequisites
+- **`mkdocs.yaml`** – site name, navigation, Material theme, and **mkdocstrings** for `api` / `app` code.
+- **`docs/index.md`** – MkDocs home; other pages are linked from there and from the nav in `mkdocs.yaml`.
+- **`docs/index.html`** – optional static HTML (open the file in a browser without MkDocs); it is not copied into `site/` when `index.md` is present (that is normal).
+- **`docs/imgs/`** – images referenced from the Markdown files.
 
-- `pip install mkdocs-material`
-- `pip install 'mkdocstrings[python]'`
+## CI
 
-### How to use
+The workflow in **`.github/workflows/ci.yaml`** runs on pushes and pull requests to `main` and `master`:
 
-
-1. Create `docs` folder
-2. Create respective `.md ` files with proper links
-3. `mkdocs new .` to create `mkdocs.yaml` and folder docs that has `index.md` and folder
-4. To show your documentation type `mkdocs serve` and click on the browser connection to open it in your browser.
-5. create a new folder `.github/workflows`
-6. create `ci.yaml` file
-
-#### mkdocs.yaml
-
-```yaml
-name: ci 
-on:
-  push:
-    branches:
-      - master 
-      - main
-permissions:
-  contents: write
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: 3.x
-      - uses: actions/cache@v2
-        with:
-          key: ${{ github.ref }}
-          path: .cache
-      - run: pip install mkdocs-material
-      - run: pip install "mkdocstrings[python]"
-      - run: pip install pillow cairosvg
-      - run: mkdocs gh-deploy --force
-```
-
-#### ci.yaml
-
-```yaml
-name: ci 
-on:
-  push:
-    branches:
-      - master 
-      - main
-permissions:
-  contents: write
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: 3.x
-      - uses: actions/cache@v2
-        with:
-          key: ${{ github.ref }}
-          path: .cache
-      - run: pip install mkdocs-material
-      - run: pip install "mkdocstrings[python]"
-      - run: pip install pillow cairosvg
-      - run: mkdocs gh-deploy --force
-```
+- **docker-build** – creates `.env` from **`.env.example`**, validates Compose, and builds **api** and **app** images.
+- **mkdocs** – installs **docs/requirements.txt** and runs **`mkdocs build`** so documentation always builds.

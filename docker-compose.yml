@@ -6,58 +6,47 @@ services:
     restart: always
     ports:
       - 5432:5432
-    environment: 
+    environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
     healthcheck:
-        test: ["CMD-SHELL", "pg_isready -U postgres"]  # Healthcheck for PostgreSQL
-        interval: 60s
-        timeout: 10s
-        retries: 5
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data #persisting data 
-            
-  pgadmin:  
+      - ./postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
     container_name: pgadmin
     image: dpage/pgadmin4
     environment:
       - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
       - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
     ports:
-      - 5050:80 # for local browser (80 is the default port of the browsed)
+      - 5050:80
     volumes:
-      - ./pgadmin_data:/var/lib/pgadmin  # Persisting pgAdmin configuration and sessions
-    depends_on: 
+      - ./pgadmin_data:/var/lib/pgadmin
+    depends_on:
       - db
 
-  etl:
-    container_name: etl
-    build:
-      context: ./etl
-      dockerfile: Dockerfile
-    ports:
-      - 3000:3000
-    volumes:
-        - ./etl:/etl
-    depends_on: 
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: "exit 0"
   api:
     build:
       context: ./api
       dockerfile: Dockerfile
-    # command: bash -c 'while !</dev/tcp/db/5432; do sleep 1; done; uvicorn main:app --host 0.0.0.0'
+    container_name: fastapi_api
     volumes:
       - ./api:/api
     ports:
       - 8008:8000
     environment:
       - DATABASE_URL=${DATABASE_URL}
+    env_file:
+      - .env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   app:
     container_name: streamlit_app

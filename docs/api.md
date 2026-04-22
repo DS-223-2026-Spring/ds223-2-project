@@ -1,9 +1,11 @@
 ## API
 
+- [Home](index.md) · [Models (detailed)](api_models.md) · [Streamlit app](app.md)
+
 ### Main.py
 
-::: myapp.api.main
+::: api.main
 
 ### Models.py
 
-::: myapp.api.Database.models
+::: api.models
