@@ -33,21 +33,18 @@ Before getting started, ensure you have the following prerequisites installed:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/hovhannisyan91/pythonmicroservicedesign.git
-   cd pythonmicroservicedesign
+   git clone https://github.com/DS-223-2026-Spring/ds223-2-project.git
+   cd ds223-2-project
    ```
 
-2. Create a local environment file (copy the example, then adjust values for your machine if needed):
-   ```bash
-   cp .env.example .env
-   ```
+2. Create a **`.env`** file in the repository root. There is no committed template; copy the block under [Environment variables](#db) into a new file named `.env` and set **`DB_USER`**, **`DB_PASSWORD`**, and a **`DATABASE_URL`** whose database name matches **`DB_NAME`** (default **`marketing_db`**). Do not commit **`.env`**.
 
 3. Build and start the Docker containers from the repository root:
    ```bash
    docker compose up --build
    ```
 
-   **ETL prerequisite:** place the two source CSVs under **`AdVise/etl/db/data_raw/`** (`social_media_ad_optimization.csv`, `marketing_campaign_dataset.csv`). The **`etl_db`** service runs once after Postgres is healthy (schema + preprocess + load). The **API** starts only after **`etl_db` exits successfully**; if the pipeline fails (for example missing CSVs), **`api`** and **`app`** will not start.
+   **ETL:** the repo includes the two source CSVs under **`AdVise/etl/db/data_raw/`** (`social_media_ad_optimization.csv`, `marketing_campaign_dataset.csv`). The **`etl_db`** service runs once after Postgres is healthy (schema + preprocess + load). The **API** starts only after **`etl_db` exits successfully**; if the pipeline fails, **`api`** and **`app`** will not start.
 
 ## Access the Application
 
@@ -64,7 +61,7 @@ After running `docker compose up --build`, you can access each component of the 
   - **Email**: Value of `PGADMIN_EMAIL` in your `.env` file
   - **Password**: Value of `PGADMIN_PASSWORD` in your `.env` file
 
-> Note: Ensure Docker is running, and you have created `.env` from `.env.example` (see Installation) with values that match your setup.
+> Note: Ensure Docker is running, and you have created **`.env`** (see [Environment variables](#db)) with values that match your setup.
 
 
 
@@ -77,8 +74,7 @@ Here’s an overview of the project’s file structure:
 ├── LICENSE
 ├── README.md
 ├── .github/             # CI workflows
-├── .env.example         # Example environment (copy to `.env` at root — shared by all services)
-├── .env                 # Your local environment (not committed)
+├── .env                 # Your local environment (create yourself; not committed)
 ├── docker-compose.yml
 ├── mkdocs.yaml
 ├── AdVise/              # Product package
@@ -105,7 +101,8 @@ Here’s an overview of the project’s file structure:
 │       ├── requirements.txt
 │       └── db/
 │           ├── Dockerfile
-│           ├── data_raw/ / data_clean/
+│           ├── data_raw/  # source CSVs (in repo) + generated paths
+│           ├── data_clean/  # build output (gitignored)
 │           ├── sql/
 │           └── scripts/
 └── docs/
@@ -120,7 +117,7 @@ Here’s an overview of the project’s file structure:
 
 1. **PostgreSQL** – primary database
 2. **pgAdmin** – database administration UI
-3. **etl_db** – one-shot marketing ETL (schema, preprocessing, `load_to_db`, `load_metrics`); requires CSVs in `AdVise/etl/db/data_raw/`. Re-running **`up`** reloads the same dataset (tables are truncated before load). **`api`** waits until **`etl_db` finishes successfully.**
+3. **etl_db** – one-shot marketing ETL (schema, preprocessing, `load_to_db`, `load_metrics`); uses CSVs in `AdVise/etl/db/data_raw/` (tracked in this repo). Re-running **`up`** reloads the same dataset (tables are truncated before load). **`api`** waits until **`etl_db` finishes successfully.**
 4. **api** – FastAPI backend (`AdVise/api/`)
 5. **app** – Streamlit (`AdVise/app/`)
 6. **ds** (optional) – Jupyter: `docker compose --profile data-science up -d --build ds` — http://localhost:8888
@@ -142,12 +139,12 @@ Before running this setup, ensure Docker and Docker Compose are installed on you
     - When running for the first time, you must create a server. Configure it as shown in the below image (Password is blurred it should be `password`.)
     ![Server Setup](docs/imgs/pgadmin_setup.png)
 
-### Environment Variables
+### Environment variables
 
-Create a `.env` file in the root directory to define your environment variables as below:
+Create a **`.env`** file in the root directory (this file is gitignored). Use variable names and layout like below; substitute your own user, password, and host (`db` inside Compose).
 
 ```env
-# Used by the API container; path must end with the same DB as DB_NAME (default product DB: marketing_db)
+# Used by the API container; path must end with the same DB as DB_NAME (default: marketing_db)
 DATABASE_URL=postgresql+psycopg2://<user>:<password>@db:5432/marketing_db
 
 # PostgreSQL (Compose `db` service)
@@ -160,7 +157,7 @@ PGADMIN_EMAIL=admin@admin.com
 PGADMIN_PASSWORD=admin
 ```
 
-Copy `.env.example` to `.env` and adjust; do not commit real secrets.
+Do not commit **`.env`** or real secrets.
 
 
 
@@ -272,5 +269,5 @@ CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.headless=true
 
 The workflow in **`.github/workflows/ci.yaml`** runs on pushes and pull requests to `main` and `master`:
 
-- **docker-build** – creates `.env` from **`.env.example`**, validates Compose, and builds **api**, **app**, and **etl_db** images (ETL is built but not executed in CI).
+- **docker-build** – creates a throwaway **`.env`** in the job (placeholders for Compose), validates Compose, and builds **api**, **app**, and **etl_db** images (ETL is built but not executed in CI).
 - **mkdocs** – installs **docs/requirements.txt**, **AdVise/api/requirements.txt**, and runs **`mkdocs build`**.
