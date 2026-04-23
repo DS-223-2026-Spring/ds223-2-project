@@ -1,47 +1,96 @@
--- USERS TABLE
-CREATE TABLE IF NOT EXISTS users (
-    user_id TEXT PRIMARY KEY,
-    age INT,
-    gender TEXT,
-    location TEXT,
-    interests TEXT,
-    device_type TEXT
+-- =============================================================
+-- AdVise – Live Application Database
+-- =============================================================
+
+-- CAMPAIGNS TABLE
+CREATE TABLE IF NOT EXISTS campaigns (
+    campaign_id       SERIAL PRIMARY KEY,
+    company           VARCHAR,
+    campaign_type     VARCHAR,
+    platform          VARCHAR,
+    budget            FLOAT,
+    duration_days     INT,
+    start_date        DATE,
+    campaign_intent   VARCHAR,
+    product_type      VARCHAR,
+    cta_type          VARCHAR,
+    discount_offered  VARCHAR,
+    season_month      VARCHAR,
+    created_at        TIMESTAMP DEFAULT NOW()
 );
 
--- ADS TABLE
+-- ADS TABLE  (one campaign -> many creatives)
 CREATE TABLE IF NOT EXISTS ads (
-    ad_id TEXT PRIMARY KEY,
-    ad_category TEXT,
-    ad_platform TEXT,
-    ad_type TEXT
+    ad_id             SERIAL PRIMARY KEY,
+    campaign_id       INT REFERENCES campaigns(campaign_id),
+    creative_type     VARCHAR,
+    cta_type          VARCHAR,
+    copy_text_length  INT,
+    aspect_ratio      VARCHAR,
+    visual_complexity FLOAT,
+    has_person        BOOLEAN,
+    creative_url      VARCHAR,
+    created_at        TIMESTAMP DEFAULT NOW()
 );
 
--- INTERACTIONS TABLE (FACT TABLE)
-CREATE TABLE IF NOT EXISTS interactions (
-    interaction_id SERIAL PRIMARY KEY,
-    user_id TEXT,
-    ad_id TEXT,
-    impressions INT,
-    clicks INT,
-    conversion INT,
-    time_spent_on_ad DOUBLE PRECISION,
-    day_of_week TEXT,
-    engagement_score DOUBLE PRECISION,
-    FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (ad_id) REFERENCES ads(ad_id)
+-- AUDIENCE TABLE  (one campaign -> one audience record)
+CREATE TABLE IF NOT EXISTS audience (
+    audience_id          SERIAL PRIMARY KEY,
+    campaign_id          INT REFERENCES campaigns(campaign_id),
+    age                  VARCHAR,
+    gender               VARCHAR,
+    location             VARCHAR,
+    interests            VARCHAR,
+    audience_temperature VARCHAR,
+    customer_type        VARCHAR,
+    career               VARCHAR,
+    created_at           TIMESTAMP DEFAULT NOW()
 );
 
--- CAMPAIGN FEATURES TABLE
-CREATE TABLE IF NOT EXISTS campaign_metrics (
-    interaction_id INT PRIMARY KEY,
-    CTR DOUBLE PRECISION,
-    conversion_rate DOUBLE PRECISION,
-    campaign_intent TEXT,
-    audience_temperature TEXT,
-    customer_type TEXT,
-    cta_type TEXT,
-    cost DOUBLE PRECISION,
-    revenue DOUBLE PRECISION,
-    ROI DOUBLE PRECISION,
-    FOREIGN KEY (interaction_id) REFERENCES interactions(interaction_id)
+-- PREDICTIONS TABLE  (one ad -> many predictions)
+CREATE TABLE IF NOT EXISTS predictions (
+    prediction_id              SERIAL PRIMARY KEY,
+    campaign_id                INT REFERENCES campaigns(campaign_id),
+    ad_id                      INT REFERENCES ads(ad_id),
+    predicted_ctr              FLOAT,
+    predicted_conversion_rate  FLOAT,
+    predicted_engagement_score FLOAT,
+    predicted_reach_score      FLOAT,
+    predicted_lead_rate        FLOAT,
+    predicted_metric           VARCHAR,
+    predicted_value            FLOAT,
+    model_version              VARCHAR,
+    created_at                 TIMESTAMP DEFAULT NOW()
+);
+
+-- =============================================================
+-- OFFLINE TRAINING DATASET  (historical – for model training)
+-- =============================================================
+CREATE TABLE IF NOT EXISTS training_dataset (
+    training_row_id      SERIAL PRIMARY KEY,
+    platform             VARCHAR,
+    budget               FLOAT,
+    duration_days        INT,
+    campaign_intent      VARCHAR,
+    product_type         VARCHAR,
+    cta_type             VARCHAR,
+    age                  VARCHAR,
+    gender               VARCHAR,
+    location             VARCHAR,
+    interests            VARCHAR,
+    audience_temperature VARCHAR,
+    customer_type        VARCHAR,
+    career               VARCHAR,
+    creative_type        VARCHAR,
+    copy_text_length     INT,
+    aspect_ratio         VARCHAR,
+    visual_complexity    FLOAT,
+    has_person           BOOLEAN,
+    ctr                  FLOAT,
+    conversion_rate      FLOAT,
+    engagement_score     FLOAT,
+    reach_score          FLOAT,
+    lead_rate            FLOAT,
+    data_source          VARCHAR,
+    is_synthetic         BOOLEAN
 );

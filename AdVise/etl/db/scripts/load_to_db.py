@@ -1,95 +1,87 @@
-"""
-Load `data_clean/final_dataset.csv` into users, ads, and interactions.
-Run after: DB exists, schema applied, preprocessing produced the CSV.
-"""
-import os
-import sys
 from pathlib import Path
-
+import os
 import pandas as pd
 
-SCRIPTS = Path(__file__).resolve().parent
-if str(SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS))
+from utils.db_utils import get_connection
 
-from utils.db_utils import get_connection  # noqa: E402
-
+# ----------------------------
+# PATHS
+# ----------------------------
 DB_ROOT = Path(__file__).resolve().parent.parent
-FINAL_CSV = DB_ROOT / "data_clean" / "final_dataset.csv"
+TRAINING_CSV = DB_ROOT / "data_clean" / "training_dataset.csv"
 
 
-def main() -> None:
-    df = pd.read_csv(FINAL_CSV)
-    print("Dataset shape:", df.shape)
+def main():
+    df = pd.read_csv(TRAINING_CSV)
+    print(f"[load_to_db] Dataset shape: {df.shape}")
 
     conn = get_connection()
     cur = conn.cursor()
+
     try:
-        # Full reload: safe when compose runs ETL on every up (keeps interaction_id 1..N for load_metrics).
-        cur.execute(
-            "TRUNCATE campaign_metrics, interactions, users, ads RESTART IDENTITY;"
+        cur.execute("TRUNCATE TABLE training_dataset RESTART IDENTITY;")
+
+        insert_sql = """
+        INSERT INTO training_dataset (
+            platform, budget, duration_days, campaign_intent, product_type, cta_type,
+            age, gender, location, interests,
+            audience_temperature, customer_type, career, creative_type,
+            copy_text_length, aspect_ratio, visual_complexity, has_person,
+            ctr, conversion_rate, engagement_score, reach_score,
+            lead_rate, data_source, is_synthetic
         )
-        # -----------------------------
-        # USERS TABLE
-        # -----------------------------
-        users = df[
-            ["user_id", "age", "gender", "location", "interests", "device_type"]
-        ].drop_duplicates()
-        for _, row in users.iterrows():
-            cur.execute(
-                """
-                INSERT INTO users (user_id, age, gender, location, interests, device_type)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (user_id) DO NOTHING;
-            """,
-                tuple(row),
-            )
-        print("Users inserted (or skipped on conflict)")
+        VALUES (
+            %s, %s, %s, %s, %s, %s,
+            %s, %s, %s, %s,
+            %s, %s, %s, %s,
+            %s, %s, %s, %s,
+            %s, %s, %s, %s,
+            %s, %s, %s
+        );
+        """
 
-        # -----------------------------
-        # ADS TABLE
-        # -----------------------------
-        ads = df[["ad_id", "ad_category", "ad_platform", "ad_type"]].drop_duplicates()
-        for _, row in ads.iterrows():
-            cur.execute(
-                """
-                INSERT INTO ads (ad_id, ad_category, ad_platform, ad_type)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (ad_id) DO NOTHING;
-            """,
-                tuple(row),
-            )
-        print("Ads inserted (or skipped on conflict)")
+        rows = []
 
-        # -----------------------------
-        # INTERACTIONS TABLE
-        # -----------------------------
         for _, row in df.iterrows():
-            cur.execute(
-                """
-                INSERT INTO interactions (
-                    user_id, ad_id, impressions, clicks, conversion,
-                    time_spent_on_ad, day_of_week, engagement_score
-                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-            """,
-                (
-                    row["user_id"],
-                    row["ad_id"],
-                    row["impressions"],
-                    row["clicks"],
-                    row["conversion"],
-                    row["time_spent_on_ad"],
-                    row["day_of_week"],
-                    row["engagement_score"],
-                ),
-            )
-        print("Interactions inserted")
+            rows.append((
+                row["platform"],
+                float(row["budget"]) if pd.notna(row["budget"]) else None,
+                int(row["duration_days"]) if pd.notna(row["duration_days"]) else None,
+                row["campaign_intent"],
+                row["product_type"],
+                row["cta_type"],
+                row["age"],
+                row["gender"],
+                row["location"],
+                row["interests"],
+                row["audience_temperature"],
+                row["customer_type"],
+                row["career"],
+                row["creative_type"],
+                int(row["copy_text_length"]) if pd.notna(row["copy_text_length"]) else None,
+                row["aspect_ratio"],
+                float(row["visual_complexity"]) if pd.notna(row["visual_complexity"]) else None,
+                bool(row["has_person"]) if pd.notna(row["has_person"]) else False,
+                float(row["ctr"]) if pd.notna(row["ctr"]) else None,
+                float(row["conversion_rate"]) if pd.notna(row["conversion_rate"]) else None,
+                float(row["engagement_score"]) if pd.notna(row["engagement_score"]) else None,
+                float(row["reach_score"]) if pd.notna(row["reach_score"]) else None,
+                float(row["lead_rate"]) if pd.notna(row["lead_rate"]) else None,
+                row["data_source"],
+                bool(row["is_synthetic"]) if pd.notna(row["is_synthetic"]) else False,
+            ))
+
+        cur.executemany(insert_sql, rows)
         conn.commit()
+
+        print(f"[load_to_db] Inserted {len(rows)} rows")
+
     finally:
         cur.close()
         conn.close()
-    _db = os.environ.get("DB_NAME") or os.environ.get("MARKETING_DB_NAME") or "marketing_db"
-    print(f"DONE: data loaded into PostgreSQL ({_db})")
+
+    db_name = os.environ.get("DB_NAME", "marketing_db")
+    print(f"[DONE] Loaded into {db_name}")
 
 
 if __name__ == "__main__":
