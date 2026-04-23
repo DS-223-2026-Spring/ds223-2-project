@@ -18,13 +18,24 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Create .env for Compose
-        run: cp .env.example .env
+        run: |
+          cat > .env << 'EOF'
+          DATABASE_URL=postgresql+psycopg2://postgres:password@db:5432/marketing_db
+          DB_USER=postgres
+          DB_PASSWORD=password
+          DB_NAME=marketing_db
+          PGADMIN_EMAIL=admin@admin.com
+          PGADMIN_PASSWORD=admin
+          EOF
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Build stack (API and app images)
         run: docker compose build api app
+
+      - name: Build marketing ETL image (etl_db)
+        run: docker compose build etl_db
 
       - name: Validate Compose file
         run: docker compose config -q
@@ -44,6 +55,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r docs/requirements.txt
+          pip install -r AdVise/api/requirements.txt
 
       - name: Build documentation
         run: mkdocs build

@@ -1,6 +1,6 @@
-# Welcome to Demo Project
+# AdVise
 
-This demo project shows how to use Docker and Docker Compose to connect multiple services: PostgreSQL, a FastAPI backend, a Streamlit app, and pgAdmin.
+This project uses Docker and Docker Compose to connect **AdVise** services: PostgreSQL, a one-shot marketing ETL under **`AdVise/etl`**, a FastAPI backend, a Streamlit app, and pgAdmin. The **ETL** runs before the API in the default stack (requires source CSVs in `AdVise/etl/db/data_raw/`). Data science / Jupyter work lives in **`AdVise/ds`**.
 
 ## Documentation pages
 
@@ -19,6 +19,8 @@ The file **`index.html`** in this same folder is a static HTML page you can open
 ## Services
 
 * **Database** – PostgreSQL.
+* **ETL** – Marketing pipeline under `AdVise/etl/db` (Compose service `etl_db`, runs before `api` when you `docker compose up`).
+* **ds** – Jupyter / modeling under `AdVise/ds` (optional Compose `data-science` profile).
 * **API** – FastAPI that talks to PostgreSQL.
 * **App** – Streamlit UI that calls the API.
 * **pgAdmin** – Web UI to inspect and manage the database.

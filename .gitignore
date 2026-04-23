@@ -1,6 +1,8 @@
 .DS_Store
 
-# Custom 
+# Custom
+AdVise/etl/.env
+AdVise/etl/db/data_clean/*.csv
 postgres_data/
 pgadmin_data/
 tasks/
@@ -167,4 +169,3 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-*.csv

@@ -1,5 +1,5 @@
 # MkDocs project configuration (run `mkdocs serve` or `mkdocs build` from the repository root)
-site_name: Python Microservice Design
+site_name: AdVise
 docs_dir: docs
 site_dir: site
 repo_name: hovhannisyan91/pythonmicroservicedesign
@@ -36,7 +36,7 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
-          paths: [.]
+          paths: [., AdVise]
           options:
             show_root_heading: true
             show_source: true

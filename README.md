@@ -1,4 +1,4 @@
-# Dockerized PostgreSQL, pgAdmin, FastAPI, and Streamlit
+# AdVise — Dockerized PostgreSQL, pgAdmin, FastAPI, Streamlit, and DS
 
 ## Branches
 
@@ -19,7 +19,7 @@ This repository contains the following branches:
 1. Install the **Dev Containers** extension in VS Code.
 2. From the repository root, run `docker compose up --build` to build the images.
 3. Open the **Dev Containers** command palette action and pick **Reopen in Container** when you want a containerized dev environment.
-4. Select a folder to work in: repository root, `app/`, or `api/`, depending on your role.
+4. Select a folder to work in: repository root, `AdVise/app/`, `AdVise/api/`, or `AdVise/ds/`, depending on your role.
 
 
 
@@ -46,6 +46,8 @@ Before getting started, ensure you have the following prerequisites installed:
    ```bash
    docker compose up --build
    ```
+
+   **ETL prerequisite:** place the two source CSVs under **`AdVise/etl/db/data_raw/`** (`social_media_ad_optimization.csv`, `marketing_campaign_dataset.csv`). The **`etl_db`** service runs once after Postgres is healthy (schema + preprocess + load). The **API** starts only after **`etl_db` exits successfully**; if the pipeline fails (for example missing CSVs), **`api`** and **`app`** will not start.
 
 ## Access the Application
 
@@ -74,43 +76,54 @@ Here’s an overview of the project’s file structure:
 .
 ├── LICENSE
 ├── README.md
-├── .github/            # CI workflows
-├── .env.example        # Example environment (copy to `.env`)
-├── .env                # Your local environment (not committed; create from `.env.example`)
-├── docker-compose.yml  # Docker Compose configuration
-├── api                 # FastAPI backend folder
-│   ├── Dockerfile      # Dockerfile for FastAPI container
-│   ├── __init__.py     # Marks this directory as a package
-│   ├── main.py         # FastAPI main entry point
-│   ├── database.py     # Database configuration and connection setup
-│   ├── models.py       # SQLAlchemy models for database tables
-│   ├── schema.py       # Pydantic schemas for request and response validation
-│   └── requirements.txt # Backend dependencies
-├── app                 # Streamlit frontend folder
-│   ├── Dockerfile      # Dockerfile for Streamlit container
+├── .github/             # CI workflows
+├── .env.example         # Example environment (copy to `.env` at root — shared by all services)
+├── .env                 # Your local environment (not committed)
+├── docker-compose.yml
+├── mkdocs.yaml
+├── AdVise/              # Product package
 │   ├── __init__.py
-│   ├── app.py          # Streamlit main entry point
-│   ├── pages           # Additional pages for Streamlit
-│   │   ├── page1.py
-│   │   └── page2.py
-│   └── requirements.txt #frontend dependancies
-├── mkdocs.yaml         # MkDocs site config (run `mkdocs serve` from repo root)
-└── docs                # Documentation assets
-    ├── requirements.txt # pip deps for building docs (MkDocs, theme, mkdocstrings)
-    ├── imgs            # Image assets for documentation
-    ├── index.md        # MkDocs home page (builds to `site/index.html`)
-    ├── index.html      # Optional static page (open locally; excluded from MkDocs output)
-    └── *.md              # Other pages (API, app, ETL, demo, …)
+│   ├── api/             # FastAPI backend
+│   │   ├── Dockerfile
+│   │   ├── main.py      # Wires route groups
+│   │   ├── database.py
+│   │   ├── models.py
+│   │   ├── schema.py
+│   │   ├── routes/      # route1, route2, routen, …
+│   │   └── requirements.txt
+│   ├── app/             # Streamlit frontend
+│   │   ├── Dockerfile
+│   │   ├── app.py
+│   │   ├── pages/
+│   │   └── requirements.txt
+│   ├── ds/              # Data science (Jupyter, modeling)
+│   │   ├── Dockerfile
+│   │   ├── experiments.ipynb
+│   │   ├── modeling_related_files.py
+│   │   └── requirements.txt
+│   └── etl/             # DB / marketing ETL (kept)
+│       ├── requirements.txt
+│       └── db/
+│           ├── Dockerfile
+│           ├── data_raw/ / data_clean/
+│           ├── sql/
+│           └── scripts/
+└── docs/
+    ├── imgs/
+    ├── index.html
+    └── (Markdown pages, MkDocs)
 ```
 
 ## Docker
 
-`docker compose` brings up the following services:
+`docker compose up` brings up the following services (order matters for **`api`** / **`app`**):
 
 1. **PostgreSQL** – primary database
 2. **pgAdmin** – database administration UI
-3. **api** – FastAPI backend (`./api`, image built from `api/Dockerfile`)
-4. **app** – Streamlit frontend (`./app`, image built from `app/Dockerfile`)
+3. **etl_db** – one-shot marketing ETL (schema, preprocessing, `load_to_db`, `load_metrics`); requires CSVs in `AdVise/etl/db/data_raw/`. Re-running **`up`** reloads the same dataset (tables are truncated before load). **`api`** waits until **`etl_db` finishes successfully.**
+4. **api** – FastAPI backend (`AdVise/api/`)
+5. **app** – Streamlit (`AdVise/app/`)
+6. **ds** (optional) – Jupyter: `docker compose --profile data-science up -d --build ds` — http://localhost:8888
 
 ## Prerequisites
 
@@ -134,13 +147,13 @@ Before running this setup, ensure Docker and Docker Compose are installed on you
 Create a `.env` file in the root directory to define your environment variables as below:
 
 ```env
-# Used by the API container (SQLAlchemy connection string)
-DATABASE_URL=postgresql+psycopg2://<user>:<password>@db:5432/<database>
+# Used by the API container; path must end with the same DB as DB_NAME (default product DB: marketing_db)
+DATABASE_URL=postgresql+psycopg2://<user>:<password>@db:5432/marketing_db
 
 # PostgreSQL (Compose `db` service)
 DB_USER=<your_database_user>
 DB_PASSWORD=<your_database_password>
-DB_NAME=<your_database_name>
+DB_NAME=marketing_db
 
 # pgAdmin
 PGADMIN_EMAIL=admin@admin.com
@@ -151,9 +164,9 @@ Copy `.env.example` to `.env` and adjust; do not commit real secrets.
 
 
 
-## Data modeling and ETL (reference)
+## Data modeling and ETL
 
-Schema diagrams and ETL notes for the course live under `docs/` (for example `docs/etl.md` and `docs/imgs/star_schema.png`). The repository root is organized around the Dockerized **db**, **api**, and **app** services; a separate batch ETL service is not part of the default Compose file so orchestration and data-science work can be added in a way that fits your team’s workflow.
+Schema diagrams and notes also live under **`docs/`** (for example `docs/etl.md` and `docs/imgs/star_schema.png`). The marketing pipeline lives under **`AdVise/etl/db`**, and the Compose service **`etl_db`** is part of the default stack. See **`docs/etl.md`**.
 
 ## API
 
@@ -165,7 +178,7 @@ Schema diagrams and ETL notes for the course live under `docs/` (for example `do
 - **Update Salary**: Update the salary of an existing employee by providing their ID and the new salary.
 - **Delete Employee**: Remove an employee record from the system using their ID.
 
-The FastAPI app under `api/` connects HTTP endpoints to PostgreSQL; you can create, read, update, and delete employees by id.
+The FastAPI app under **`AdVise/api/`** (with **`routes/`** for route groups) connects HTTP endpoints to PostgreSQL; you can create, read, update, and delete employees by id.
 
 ### Requests
 
@@ -223,7 +236,7 @@ CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.headless=true
   app:
     container_name: streamlit_app
     build:
-      context: ./app
+      context: ./AdVise/app
       dockerfile: Dockerfile
     ports:
       - 8501:8501
@@ -238,6 +251,7 @@ CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.headless=true
 1. Install [MkDocs](https://www.mkdocs.org/) tooling (from the repository root):
    ```bash
    pip install -r docs/requirements.txt
+   pip install -r AdVise/api/requirements.txt
    ```
 2. Live preview:
    ```bash
@@ -249,7 +263,7 @@ CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.headless=true
    mkdocs build
    ```
 
-- **`mkdocs.yaml`** – site name, navigation, Material theme, and **mkdocstrings** for `api` / `app` code.
+- **`mkdocs.yaml`** – site name, navigation, Material theme, and **mkdocstrings** for the **`api`** and **`app`** packages under **`AdVise/`** (install **`AdVise/api/requirements.txt`** for doc builds that import the FastAPI app).
 - **`docs/index.md`** – MkDocs home; other pages are linked from there and from the nav in `mkdocs.yaml`.
 - **`docs/index.html`** – optional static HTML (open the file in a browser without MkDocs); it is not copied into `site/` when `index.md` is present (that is normal).
 - **`docs/imgs/`** – images referenced from the Markdown files.
@@ -258,5 +272,5 @@ CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.headless=true
 
 The workflow in **`.github/workflows/ci.yaml`** runs on pushes and pull requests to `main` and `master`:
 
-- **docker-build** – creates `.env` from **`.env.example`**, validates Compose, and builds **api** and **app** images.
-- **mkdocs** – installs **docs/requirements.txt** and runs **`mkdocs build`** so documentation always builds.
+- **docker-build** – creates `.env` from **`.env.example`**, validates Compose, and builds **api**, **app**, and **etl_db** images (ETL is built but not executed in CI).
+- **mkdocs** – installs **docs/requirements.txt**, **AdVise/api/requirements.txt**, and runs **`mkdocs build`**.

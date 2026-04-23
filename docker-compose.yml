@@ -31,13 +31,30 @@ services:
     depends_on:
       - db
 
+  # One-shot: schema + preprocessing + load (requires CSVs under AdVise/etl/db/data_raw). API waits until this exits 0.
+  etl_db:
+    container_name: etl_db
+    build:
+      context: ./AdVise/etl/db
+      dockerfile: Dockerfile
+    environment:
+      POSTGRES_HOST: db
+    env_file:
+      - .env
+    volumes:
+      - ./AdVise/etl/db:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
   api:
     build:
-      context: ./api
+      context: ./AdVise/api
       dockerfile: Dockerfile
     container_name: fastapi_api
     volumes:
-      - ./api:/api
+      - ./AdVise/api:/api
     ports:
       - 8008:8000
     environment:
@@ -47,17 +64,35 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      etl_db:
+        condition: service_completed_successfully
 
   app:
     container_name: streamlit_app
     build:
-      context: ./app
+      context: ./AdVise/app
       dockerfile: Dockerfile
     volumes:
-      - ./app:/app
+      - ./AdVise/app:/app
     ports:
       - 8501:8501
     environment:
       - API_URL=http://api:8000
     depends_on:
       - api
+
+  # Jupyter for AdVise/ds (optional)
+  ds:
+    container_name: advise_ds
+    build:
+      context: ./AdVise/ds
+      dockerfile: Dockerfile
+    profiles:
+      - data-science
+    ports:
+      - 8888:8888
+    volumes:
+      - ./AdVise/ds:/work
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /work
