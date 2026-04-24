@@ -20,7 +20,7 @@ The file **`index.html`** in this same folder is a static HTML page you can open
 ## Services
 
 * **Database** – PostgreSQL.
-* **ETL** – Marketing pipeline under `AdVise/etl/db` (Compose service `etl_db`, runs before `api` when you `docker compose up`).
+* **ETL** – Marketing pipeline under `AdVise/etl/db` (Compose service `etl_db`, runs before `back` when you `docker compose up`).
 * **ds** – Jupyter / modeling under `AdVise/ds` (optional Compose `data-science` profile).
 * **API** – FastAPI that talks to PostgreSQL.
 * **App** – Streamlit UI that calls the API.

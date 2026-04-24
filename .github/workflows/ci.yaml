@@ -31,8 +31,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build stack (API and app images)
-        run: docker compose build api app
+      - name: Build stack (back and app images)
+        run: docker compose build back app
 
       - name: Build marketing ETL image (etl_db)
         run: docker compose build etl_db
