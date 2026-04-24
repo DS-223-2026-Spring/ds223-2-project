@@ -6,7 +6,7 @@
 
 | Path | Role |
 |------|------|
-| **`AdVise/etl/db/`** | Pipeline: SQL schema, **`Dockerfile`**, **`docker-entrypoint.sh`**. Compose **`etl_db`** (one-shot) applies schema, runs preprocessing, then loads **`training_dataset`** only. |
+| **`AdVise/etl/db/`** | Pipeline: SQL schema, **`Dockerfile`**, **`docker-entrypoint.sh`**. Compose **`etl_db`** (one-shot): schema → preprocessing → **`training_dataset`** load → **`populate_app_tables`** (synthetic live ERD rows). |
 
 ### `AdVise/etl/db/`
 
@@ -23,6 +23,7 @@ AdVise/etl/db/
       db_utils.py
     preprocessing.py
     load_to_db.py
+    populate_app_tables.py
 ```
 
 **Suggested order (local, Postgres running):**
@@ -30,8 +31,9 @@ AdVise/etl/db/
 1. `CREATE DATABASE` + schema: `bash AdVise/etl/db/sql/apply_marketing_schema.sh` (with `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `POSTGRES_HOST` from root `.env`).
 2. `python AdVise/etl/db/scripts/preprocessing.py` — reads **`data_raw/`** CSVs, writes **`data_clean/training_dataset.csv`**.
 3. `python AdVise/etl/db/scripts/load_to_db.py` — `TRUNCATE training_dataset` + bulk insert from that CSV (idempotent for the offline table).
+4. `python AdVise/etl/db/scripts/populate_app_tables.py` — inserts synthetic rows into **`campaigns`**, **`ads`**, **`audience`**, **`predictions`** (also run automatically in Docker after step 3).
 
-Live ERD tables (`campaigns`, `ads`, `audience`, `predictions`) are **not** filled by this batch job; they are intended for user/API input.
+For production, replace or extend synthetic data with real user/API-driven data as needed.
 
 `db_checks.sql`: `psql -d marketing_db -f AdVise/etl/db/sql/db_checks.sql` (use the same `DB_NAME` as in `.env`).
 
