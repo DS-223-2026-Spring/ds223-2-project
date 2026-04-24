@@ -1,13 +1,11 @@
 import streamlit as st
 
-st.set_page_config(page_title="AdVise Home", layout="wide")
+st.title("🚀 AdVise Platform")
 
-st.title("AdVise")
-st.subheader("Predict Before You Launch")
+st.markdown("### Predict campaign success before launch")
 
 st.write(
-    "Upload campaign creatives, enter campaign details, and receive predicted "
-    "performance results before spending advertising budget."
+    "Upload creatives, input campaign data, and receive AI-driven predictions."
 )
 
 st.divider()
@@ -15,17 +13,17 @@ st.divider()
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.subheader("Upload Creatives")
-    st.write("Add 1–3 images or short videos for analysis.")
+    st.markdown("### 🎨 Upload Creatives")
+    st.write("Images or videos for analysis")
 
 with col2:
-    st.subheader("Input Metrics")
-    st.write("Enter budget, platform, audience, CTA, intent, and duration.")
+    st.markdown("### 📊 Input Metrics")
+    st.write("Budget, audience, platform")
 
 with col3:
-    st.subheader("View Results")
-    st.write("See predicted success metrics and best creative recommendation.")
+    st.markdown("### 🤖 Get Predictions")
+    st.write("Performance & recommendations")
 
 st.divider()
 
-st.success("Goal: help marketers choose stronger creatives before campaign launch.")
+st.success("Make smarter marketing decisions with AI.")

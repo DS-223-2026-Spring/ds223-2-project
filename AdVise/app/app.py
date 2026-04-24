@@ -1,13 +1,29 @@
 import streamlit as st
 
-st.set_page_config(page_title="AdVise", layout="wide")
+st.set_page_config(
+    page_title="AdVise",
+    layout="wide",
+    page_icon="📊"
+)
 
-st.title("AdVise")
+st.markdown("""
+    <style>
+    .main {
+        background-color: #0e1117;
+    }
+    h1, h2, h3 {
+        color: #ffffff;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+st.title("📊 AdVise")
 st.subheader("Predict Before You Launch")
 
 st.write(
-    "AdVise helps marketers upload creatives, enter campaign metrics, "
-    "and view predicted campaign performance before launch."
+    "AI-powered platform to evaluate campaign performance before spending budget."
 )
 
-st.info("Use the sidebar to open Home, Campaign Input, or Prediction Results.")
+st.divider()
+
+st.info("Use the sidebar to navigate between pages.")

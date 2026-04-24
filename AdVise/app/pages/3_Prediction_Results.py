@@ -1,24 +1,39 @@
 import streamlit as st
 
-st.title("Prediction Results")
+st.title("📊 Prediction Results")
 
-st.subheader("Winning Creative")
-st.write("Creative A is predicted to perform best.")
+st.divider()
 
-st.metric("Creative Score", "91")
-st.metric("Predicted Conversion Rate", "3.8%")
-st.metric("Predicted CTR", "2.6%")
-st.metric("Predicted Reach Score", "74/100")
-st.metric("Predicted Lead Rate", "4.1%")
-st.metric("Predicted Engagement Score", "81/100")
-st.metric("Brand Consistency", "88/100")
+st.success("🏆 Best Creative: Creative A")
 
-st.subheader("Creative Comparison")
-st.write("Creative A - Winning creative")
-st.write("Creative B - Good alternative")
-st.write("Creative C - Needs improvement")
+# Metrics row
+m1, m2, m3 = st.columns(3)
 
-st.subheader("Recommendations")
-st.write("Launch with Creative A as the primary asset.")
-st.write("Use a strong CTA that aligns with the campaign intent.")
-st.write("Reduce text density where needed.")
+m1.metric("Conversion Rate", "3.8%")
+m2.metric("CTR", "2.6%")
+m3.metric("Engagement", "81%")
+
+st.divider()
+
+left, right = st.columns(2)
+
+# Comparison
+with left:
+    st.markdown("### 📊 Creative Comparison")
+
+    st.write("Creative A")
+    st.progress(0.91)
+
+    st.write("Creative B")
+    st.progress(0.83)
+
+    st.write("Creative C")
+    st.progress(0.78)
+
+# Recommendations
+with right:
+    st.markdown("### 💡 Recommendations")
+
+    st.info("Use Creative A as primary asset")
+    st.info("Improve CTA visibility")
+    st.info("Reduce text density")
