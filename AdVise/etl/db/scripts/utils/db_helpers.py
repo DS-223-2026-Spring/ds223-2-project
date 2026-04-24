@@ -8,12 +8,18 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def get_connection():
+    """Same host/db env conventions as `db_utils` (POSTGRES_HOST in Docker, DB_HOST on laptop)."""
+    host = os.environ.get("POSTGRES_HOST") or os.environ.get("DB_HOST", "localhost")
+    port = os.environ.get("POSTGRES_PORT") or os.environ.get("DB_PORT", "5432")
+    password = os.environ.get("DB_PASSWORD") or os.environ.get("POSTGRES_PASSWORD")
+    if not password:
+        raise RuntimeError("Set DB_PASSWORD (or POSTGRES_PASSWORD) for database access.")
     return psycopg2.connect(
-        host=os.getenv("DB_HOST"),
-        database=os.getenv("DB_NAME"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        port=os.getenv("DB_PORT")
+        host=host,
+        database=os.environ.get("DB_NAME", "marketing_db"),
+        user=os.environ.get("DB_USER", os.environ.get("POSTGRES_USER", "postgres")),
+        password=password,
+        port=port,
     )
 # -------------------------
 # CREATE (INSERT)
