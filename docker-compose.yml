@@ -67,8 +67,8 @@ services:
       etl_db:
         condition: service_completed_successfully
 
-  front:
-    container_name: front
+  app:
+    container_name: streamlit_app
     build:
       context: ./AdVise/app
       dockerfile: Dockerfile
