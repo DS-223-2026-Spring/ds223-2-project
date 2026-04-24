@@ -45,7 +45,6 @@ Before getting started, ensure you have the following prerequisites installed:
    ```
 
    **ETL:** keep the two source CSVs under **`AdVise/etl/db/data_raw/`** (`tech_advertising_campaigns_dataset.csv`, `marketing_campaign_dataset.csv`). The **`etl_db`** service runs once after Postgres is healthy (schema + **`preprocessing.py`** + **`load_to_db.py`** into **`training_dataset`**). The **API** starts only after **`etl_db` exits successfully**; if the pipeline fails, **`api`** and **`app`** will not start.
-
 ## Access the Application
 
 After running `docker compose up --build`, you can access each component of the application at the following URLs:
@@ -216,7 +215,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the contents of the front directory to /app in the container
+# Copy the contents of the AdVise/app package to /app in the container
 COPY . .
 
 # Expose Streamlit's default port
