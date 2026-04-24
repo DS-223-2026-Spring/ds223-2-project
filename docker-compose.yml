@@ -31,7 +31,7 @@ services:
     depends_on:
       - db
 
-  # One-shot: schema + preprocessing + load (requires CSVs under AdVise/etl/db/data_raw). API waits until this exits 0.
+  # One-shot: schema + preprocessing + load_to_db (training_dataset). Needs data_raw CSVs; see docs/etl.md. API waits until exit 0.
   etl_db:
     container_name: etl_db
     build:

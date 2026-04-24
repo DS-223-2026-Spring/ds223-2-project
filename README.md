@@ -44,7 +44,7 @@ Before getting started, ensure you have the following prerequisites installed:
    docker compose up --build
    ```
 
-   **ETL:** the repo includes the two source CSVs under **`AdVise/etl/db/data_raw/`** (`social_media_ad_optimization.csv`, `marketing_campaign_dataset.csv`). The **`etl_db`** service runs once after Postgres is healthy (schema + preprocess + load). The **API** starts only after **`etl_db` exits successfully**; if the pipeline fails, **`api`** and **`app`** will not start.
+   **ETL:** keep the two source CSVs under **`AdVise/etl/db/data_raw/`** (`tech_advertising_campaigns_dataset.csv`, `marketing_campaign_dataset.csv`). The **`etl_db`** service runs once after Postgres is healthy (schema + **`preprocessing.py`** + **`load_to_db.py`** into **`training_dataset`**). The **API** starts only after **`etl_db` exits successfully**; if the pipeline fails, **`api`** and **`app`** will not start.
 
 ## Access the Application
 
@@ -117,7 +117,7 @@ Here’s an overview of the project’s file structure:
 
 1. **PostgreSQL** – primary database
 2. **pgAdmin** – database administration UI
-3. **etl_db** – one-shot marketing ETL (schema, preprocessing, `load_to_db`, `load_metrics`); uses CSVs in `AdVise/etl/db/data_raw/` (tracked in this repo). Re-running **`up`** reloads the same dataset (tables are truncated before load). **`api`** waits until **`etl_db` finishes successfully.**
+3. **etl_db** – one-shot ETL (schema, preprocessing, `load_to_db` → **`training_dataset`** only). Uses raw CSVs in `AdVise/etl/db/data_raw/`. Re-running **`up`** truncates and reloads the offline training table. **`api`** waits until **`etl_db` finishes successfully.**
 4. **api** – FastAPI backend (`AdVise/api/`)
 5. **app** – Streamlit (`AdVise/app/`)
 6. **ds** (optional) – Jupyter: `docker compose --profile data-science up -d --build ds` — http://localhost:8888

@@ -1,4 +1,4 @@
-# Marketing DB ETL: preprocessing + load_to_db + load_metrics (DB_NAME from .env, default marketing_db; same Postgres as Compose `db`)
+# Marketing ETL: apply schema, preprocessing, load training_dataset (DB_NAME from .env; same Postgres as Compose `db`)
 # Build:  docker build -t etl-db ./AdVise/etl/db
 # Run:     use Compose service `etl_db` (profile `marketing`) or: docker run --env-file .env -e POSTGRES_HOST=host.docker.internal ... 
 FROM python:3.12-slim-bullseye
