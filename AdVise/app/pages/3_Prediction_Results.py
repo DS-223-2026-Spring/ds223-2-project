@@ -1,39 +1,62 @@
 import streamlit as st
+from ui_components import page_header, metric_card, creative_score, recommendation_card
 
-st.title("📊 Prediction Results")
+st.set_page_config(page_title="Prediction Results", layout="wide")
+
+page_header(
+    "Prediction Results",
+    "Dashboard for predicted campaign performance and creative comparison."
+)
+
+st.success("Best Creative: Creative A")
+
+st.subheader("Model Output Area")
+
+m1, m2, m3 = st.columns(3)
+
+with m1:
+    metric_card("Conversion Rate", "3.8%")
+
+with m2:
+    metric_card("CTR", "2.6%")
+
+with m3:
+    metric_card("Engagement Score", "81/100")
 
 st.divider()
 
-st.success("🏆 Best Creative: Creative A")
-
-# Metrics row
-m1, m2, m3 = st.columns(3)
-
-m1.metric("Conversion Rate", "3.8%")
-m2.metric("CTR", "2.6%")
-m3.metric("Engagement", "81%")
+st.subheader("Charts Placeholder")
+st.write("Future charts for CTR, conversion rate, engagement, and creative performance will be displayed here.")
 
 st.divider()
 
 left, right = st.columns(2)
 
-# Comparison
 with left:
-    st.markdown("### 📊 Creative Comparison")
+    st.subheader("Creative Comparison")
 
-    st.write("Creative A")
-    st.progress(0.91)
+    creative_score(
+        "Creative A",
+        "Winning creative with strong CTA and clear product focus.",
+        91
+    )
 
-    st.write("Creative B")
-    st.progress(0.83)
+    creative_score(
+        "Creative B",
+        "Good alternative, but CTA placement can be improved.",
+        83
+    )
 
-    st.write("Creative C")
-    st.progress(0.78)
+    creative_score(
+        "Creative C",
+        "Needs improvement because text density is high.",
+        78
+    )
 
-# Recommendations
 with right:
-    st.markdown("### 💡 Recommendations")
+    st.subheader("Recommendations")
 
-    st.info("Use Creative A as primary asset")
-    st.info("Improve CTA visibility")
-    st.info("Reduce text density")
+    recommendation_card("Launch with Creative A as the primary asset.")
+    recommendation_card("Improve CTA visibility for better conversion.")
+    recommendation_card("Reduce text density in weaker creatives.")
+    recommendation_card("Keep campaign messaging aligned with selected intent.")
