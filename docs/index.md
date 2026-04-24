@@ -23,7 +23,7 @@ The file **`index.html`** in this same folder is a static HTML page you can open
 * **ETL** – Marketing pipeline under `AdVise/etl/db` (Compose service `etl_db`, runs before `back` when you `docker compose up`).
 * **ds** – Jupyter / modeling under `AdVise/ds` (optional Compose `data-science` profile).
 * **API** – FastAPI that talks to PostgreSQL.
-* **App** – Streamlit UI that calls the API.
+* **Front** – Streamlit UI that calls the API (Compose service **`front`**; code in **`AdVise/app/`**).
 * **pgAdmin** – Web UI to inspect and manage the database.
 * **Docs** – This site, built with [MkDocs](https://www.mkdocs.org/) (run `mkdocs serve` from the repository root to preview).
 
