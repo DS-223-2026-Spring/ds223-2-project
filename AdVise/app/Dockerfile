@@ -16,7 +16,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the contents of the front directory to /app in the container
+# Copy the contents of the AdVise app package to /app in the container
 COPY . .
 
 # Expose Streamlit's default port

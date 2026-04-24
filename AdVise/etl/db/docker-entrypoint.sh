@@ -8,4 +8,5 @@ psql -h "$POSTGRES_HOST" -U "${DB_USER:-postgres}" -d postgres -c "CREATE DATABA
 psql -h "$POSTGRES_HOST" -U "${DB_USER:-postgres}" -d "$DB_NAME" -v ON_ERROR_STOP=1 -f /app/sql/schema.sql
 python /app/scripts/preprocessing.py
 python /app/scripts/load_to_db.py
+python /app/scripts/populate_app_tables.py
 echo "etl_db pipeline finished"
