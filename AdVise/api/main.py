@@ -3,6 +3,11 @@ from routes.route1 import router as employees_router
 from routes.route2 import router as core_router
 from routes.routen import router as ext_router
 from routes.campaigns import router as campaigns_router
+from routes.campaigns import router as campaigns_router
+from routes.ads import router as ads_router
+from routes.audience import router as audience_router
+from routes.predictions import router as predictions_router
+from routes.training_dataset import router as training_dataset_router
 
 app = FastAPI(title="AdVise API", description="AdVise backend", version="0.1.0")
 
@@ -10,6 +15,11 @@ app.include_router(employees_router, prefix="/employees", tags=["employees"])
 app.include_router(core_router, tags=["core"])
 app.include_router(ext_router, prefix="/ext", tags=["extension"])
 app.include_router(campaigns_router)
+app.include_router(campaigns_router)
+app.include_router(ads_router)
+app.include_router(audience_router)
+app.include_router(predictions_router)
+app.include_router(training_dataset_router)
 
 
 @app.get("/")
