@@ -48,11 +48,11 @@ services:
         condition: service_healthy
     restart: "no"
 
-  api:
+  back:
     build:
       context: ./AdVise/api
       dockerfile: Dockerfile
-    container_name: fastapi_api
+    container_name: fastapi_back
     volumes:
       - ./AdVise/api:/api
     ports:
@@ -67,8 +67,8 @@ services:
       etl_db:
         condition: service_completed_successfully
 
-  app:
-    container_name: streamlit_app
+  front:
+    container_name: front
     build:
       context: ./AdVise/app
       dockerfile: Dockerfile
@@ -77,9 +77,9 @@ services:
     ports:
       - 8501:8501
     environment:
-      - API_URL=http://api:8000
+      - API_URL=http://back:8000
     depends_on:
-      - api
+      - back
 
   # Jupyter for AdVise/ds (optional). Mount full AdVise/ so paths like ../etl/... in notebooks match host layout.
   ds:
