@@ -1,5 +1,9 @@
 numpy
 pandas
+matplotlib
+seaborn
+scikit-learn
+psycopg2-binary
 jupyter
 ipykernel
 python-dotenv

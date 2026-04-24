@@ -81,7 +81,7 @@ services:
     depends_on:
       - back
 
-  # Jupyter for AdVise/ds (optional)
+  # Jupyter for AdVise/ds (optional). Mount full AdVise/ so paths like ../etl/... in notebooks match host layout.
   ds:
     container_name: advise_ds
     build:
@@ -92,7 +92,24 @@ services:
     ports:
       - 8888:8888
     volumes:
-      - ./AdVise/ds:/work
+      - ./AdVise:/advise
+    working_dir: /advise/ds
     environment:
       - PYTHONUNBUFFERED=1
-    working_dir: /work
+      # So db_helpers can reach Postgres when the db service is on the same Compose network
+      - POSTGRES_HOST=db
+    env_file:
+      - .env
+    # Show ds, api, etl, … in the Jupyter file tree; keep kernels cwd aligned with /advise/ds
+    command:
+      - sh
+      - -c
+      - >
+        exec jupyter notebook
+        --ip=0.0.0.0
+        --port=8888
+        --no-browser
+        --allow-root
+        --ServerApp.token=
+        --ServerApp.password=
+        --ServerApp.root_dir=/advise
