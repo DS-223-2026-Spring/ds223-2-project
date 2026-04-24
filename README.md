@@ -44,7 +44,7 @@ Before getting started, ensure you have the following prerequisites installed:
    docker compose up --build
    ```
 
-   **ETL:** keep the two source CSVs under **`AdVise/etl/db/data_raw/`** (`tech_advertising_campaigns_dataset.csv`, `marketing_campaign_dataset.csv`). The **`etl_db`** service runs once after Postgres is healthy (schema + **`preprocessing.py`** + **`load_to_db.py`** into **`training_dataset`**). The **API** starts only after **`etl_db` exits successfully**; if the pipeline fails, **`api`** and **`app`** will not start.
+   **ETL:** keep the two source CSVs under **`AdVise/etl/db/data_raw/`** (`tech_advertising_campaigns_dataset.csv`, `marketing_campaign_dataset.csv`). The **`etl_db`** service runs once after Postgres is healthy (schema + **`preprocessing.py`** + **`load_to_db.py`** into **`training_dataset`**). The **API** starts only after **`etl_db` exits successfully**; if the pipeline fails, **`api`** and **`front`** will not start.
 ## Access the Application
 
 After running `docker compose up --build`, you can access each component of the application at the following URLs:
@@ -112,13 +112,13 @@ Here’s an overview of the project’s file structure:
 
 ## Docker
 
-`docker compose up` brings up the following services (order matters for **`api`** / **`app`**):
+`docker compose up` brings up the following services (order matters for **`api`** / **`front`**):
 
 1. **PostgreSQL** – primary database
 2. **pgAdmin** – database administration UI
 3. **etl_db** – one-shot ETL (schema, preprocessing, `load_to_db` → **`training_dataset`** only). Uses raw CSVs in `AdVise/etl/db/data_raw/`. Re-running **`up`** truncates and reloads the offline training table. **`api`** waits until **`etl_db` finishes successfully.**
 4. **api** – FastAPI backend (`AdVise/api/`)
-5. **app** – Streamlit (`AdVise/app/`)
+5. **front** – Streamlit (`AdVise/app/`; Compose service name **`front`**)
 6. **ds** (optional) – Jupyter: `docker compose --profile data-science up -d --build ds` — http://localhost:8888
 
 ## Prerequisites
@@ -189,7 +189,7 @@ The FastAPI app under **`AdVise/api/`** (with **`routes/`** for route groups) co
 
 ## Web Application
 
-Adding another service named app, which is going to be responsible for the frontend.
+The Streamlit UI is the Compose service **`front`** (build context `AdVise/app/`).
 
 To Open the web app visit: [here](http://localhost:8501/)
 
@@ -229,8 +229,8 @@ CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.headless=true
 ### Service
 
 ```yaml
-  app:
-    container_name: streamlit_app
+  front:
+    container_name: front
     build:
       context: ./AdVise/app
       dockerfile: Dockerfile
@@ -268,5 +268,5 @@ CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.headless=true
 
 The workflow in **`.github/workflows/ci.yaml`** runs on pushes and pull requests to `main` and `master`:
 
-- **docker-build** – creates a throwaway **`.env`** in the job (placeholders for Compose), validates Compose, and builds **api**, **app**, and **etl_db** images (ETL is built but not executed in CI).
+- **docker-build** – creates a throwaway **`.env`** in the job (placeholders for Compose), validates Compose, and builds **api**, **front**, and **etl_db** images (ETL is built but not executed in CI).
 - **mkdocs** – installs **docs/requirements.txt**, **AdVise/api/requirements.txt**, and runs **`mkdocs build`**.

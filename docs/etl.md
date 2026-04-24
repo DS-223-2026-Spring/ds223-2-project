@@ -41,9 +41,9 @@ For production, replace or extend synthetic data with real user/API-driven data 
 
 ## Docker Compose (default `up`)
 
-From the repository root, **`docker compose up --build`** starts **`db`**, runs **`etl_db`** once after `db` is healthy, then **`api`** (only if **`etl_db` exits 0) and **`app`**.
+From the repository root, **`docker compose up --build`** starts **`db`**, runs **`etl_db`** once after `db` is healthy, then **`api`** (only if **`etl_db` exits 0) and **`front`**.
 
-- **Required in `data_raw/`:** **`tech_advertising_campaigns_dataset.csv`** and **`marketing_campaign_dataset.csv`**. If preprocessing fails, **`etl_db`** fails and **`api` / `app`** will not start.
+- **Required in `data_raw/`:** **`tech_advertising_campaigns_dataset.csv`** and **`marketing_campaign_dataset.csv`**. If preprocessing fails, **`etl_db`** fails and **`api` / `front`** will not start.
 - **Idempotent offline load:** `load_to_db.py` truncates **`training_dataset`** and reloads from the generated CSV, so re-running **`up`** does not duplicate training rows.
 - **pgAdmin** may start in parallel with **`etl_db`**; it only needs **`db`**.
 
