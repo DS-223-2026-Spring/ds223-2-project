@@ -1,3 +1,9 @@
+"""
+Load `data_clean/training_dataset.csv` into the offline `training_dataset` table only.
+
+Live ERD tables (`campaigns`, `ads`, `audience`, `predictions`) are filled by the app/API, not here.
+Run after: schema applied and `preprocessing.py` produced the CSV.
+"""
 from pathlib import Path
 import os
 import pandas as pd
