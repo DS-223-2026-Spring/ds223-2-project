@@ -18,6 +18,30 @@ for the AdVise ad performance prediction project. The goal is to predict
 
 ---
 
+## Running Jupyter in Docker
+
+The **`ds`** service in the **repository root** `docker-compose.yml` is assigned the Compose profile **`data-science`**. Services with a profile are **not** started by plain `docker compose up` / `docker compose up --build`; that is intentional so the default stack (database, ETL, API, Streamlit) stays the main path.
+
+From the **repository root**, start the DS container with:
+
+```bash
+docker compose --profile data-science up -d --build ds
+```
+
+Open **http://localhost:8888** in a **normal browser** (Chrome, Safari, Firefox). Some IDE-embedded or Simple-Browser views can still show a “token or password” screen even when the server has auth disabled; use an external browser for the least hassle.
+
+The **`ds`** service mounts the whole **`AdVise/`** tree at **`/advise`** in the container (not only `AdVise/ds/`), so paths like `../etl/db/...` and imports from `db_helpers` work the same as on your host, and the Jupyter file browser can list **ds**, **etl**, **api**, etc. After changing **`requirements.txt`**, rebuild: **`docker compose --profile data-science up -d --build ds`**. For Postgres from inside the container, start **`db`** on the same Compose project (e.g. full **`up`**) and keep a root **`.env`** with **`DB_NAME`**, **`DB_USER`**, **`DB_PASSWORD`**, and related variables.
+
+To bring up **everything** (default services **and** Jupyter) in one command:
+
+```bash
+docker compose --profile data-science up --build
+```
+
+See also the **Docker** section in the root **`README.md`**.
+
+---
+
 ## Data
 - **Primary source:** PostgreSQL DB via CRUD helpers (`etl/db/scripts/utils/db_helpers.py`)
 - **Fallback source:** `../etl/db/data_clean/training_dataset.csv` (used when DB is unavailable locally)

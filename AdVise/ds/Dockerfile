@@ -13,4 +13,5 @@ COPY . .
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8888
-CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--NotebookApp.token=''"]
+# Notebook 7+ uses Jupyter Server: disable auth for local dev (exec + shell so empty token is not mangled)
+CMD ["sh", "-c", "exec jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --ServerApp.token= --ServerApp.password="]

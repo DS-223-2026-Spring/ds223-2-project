@@ -113,14 +113,15 @@ Here’s an overview of the project’s file structure:
 
 ## Docker
 
-`docker compose up` brings up the following services (order matters for **`api`** / **`app`**):
+`docker compose up` / `docker compose up --build` starts the **default** services below (order matters for **`api`** / **`app`**). The **`ds`** (Jupyter) service is **not** in that default set: it is tagged with the Compose profile **`data-science`**, so you must pass **`--profile data-science`** when you want Jupyter. More detail: **`AdVise/ds/README.md`**.
 
 1. **PostgreSQL** – primary database
 2. **pgAdmin** – database administration UI
 3. **etl_db** – one-shot ETL (schema, preprocessing, `load_to_db` → **`training_dataset`** only). Uses raw CSVs in `AdVise/etl/db/data_raw/`. Re-running **`up`** truncates and reloads the offline training table. **`api`** waits until **`etl_db` finishes successfully.**
 4. **api** – FastAPI backend (`AdVise/api/`)
 5. **app** – Streamlit (`AdVise/app/`)
-6. **ds** (optional) – Jupyter: `docker compose --profile data-science up -d --build ds` — http://localhost:8888
+6. **ds** (optional, profile **`data-science`**) – Jupyter under **`AdVise/ds`**:  
+   `docker compose --profile data-science up -d --build ds` — http://localhost:8888
 
 ## Prerequisites
 
