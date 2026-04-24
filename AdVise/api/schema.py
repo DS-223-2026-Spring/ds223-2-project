@@ -16,3 +16,16 @@ class EmployeeCreate(BaseModel):
     last_name: str
     email: str
     salary: int
+    
+class CampaignBase(BaseModel):
+    name: str
+    budget: float
+    platform: str
+
+class CampaignCreate(CampaignBase):
+    pass
+
+class CampaignResponse(CampaignBase):
+    id: int
+    
+    
