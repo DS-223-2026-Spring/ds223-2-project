@@ -1,16 +1,17 @@
--- CHECK DATA INTEGRITY
-SELECT 'users' AS table_name, COUNT(*) AS n FROM users;
+-- Row counts (MVP ERD)
+SELECT 'campaigns' AS table_name, COUNT(*) AS n FROM campaigns;
 SELECT 'ads' AS table_name, COUNT(*) AS n FROM ads;
-SELECT 'interactions' AS table_name, COUNT(*) AS n FROM interactions;
-SELECT 'campaign_metrics' AS table_name, COUNT(*) AS n FROM campaign_metrics;
+SELECT 'audience' AS table_name, COUNT(*) AS n FROM audience;
+SELECT 'predictions' AS table_name, COUNT(*) AS n FROM predictions;
+SELECT 'training_dataset' AS table_name, COUNT(*) AS n FROM training_dataset;
 
--- CHECK MISSING RELATIONS
+-- Orphan checks (should be 0 with FKs enforced)
 SELECT
-    (SELECT COUNT(*) FROM interactions i
-     LEFT JOIN users u ON i.user_id = u.user_id
-     WHERE u.user_id IS NULL) AS interactions_missing_user;
+    (SELECT COUNT(*) FROM ads a
+     LEFT JOIN campaigns c ON a.campaign_id = c.campaign_id
+     WHERE c.campaign_id IS NULL) AS ads_missing_campaign;
 
 SELECT
-    (SELECT COUNT(*) FROM interactions i
-     LEFT JOIN ads a ON i.ad_id = a.ad_id
-     WHERE a.ad_id IS NULL) AS interactions_missing_ad;
+    (SELECT COUNT(*) FROM predictions p
+     LEFT JOIN ads a ON p.ad_id = a.ad_id
+     WHERE a.ad_id IS NULL) AS predictions_missing_ad;
