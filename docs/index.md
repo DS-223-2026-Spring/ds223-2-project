@@ -9,6 +9,7 @@ This project uses Docker and Docker Compose to connect **AdVise** services: Post
 - [Streamlit application](app.md) — `app` package reference
 - [ETL and orchestration](etl.md) — design notes and next steps
 - [Group demo script](demo.md) — talking points and demo flow
+- [API Assumptions and Pending Dependencies](api_assumptions.md)
 
 The file **`index.html`** in this same folder is a static HTML page you can open directly in a browser (it is not used as the MkDocs home page, because the site is generated from this `index.md` file; MkDocs will skip copying `index.html` into `site/` when `index.md` is present, which is expected).
 

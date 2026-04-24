@@ -30,6 +30,7 @@ nav:
   - Streamlit app: app.md
   - ETL: etl.md
   - Demo: demo.md
+  - API Assumptions: api_assumptions.md
 
 plugins:
   - search
