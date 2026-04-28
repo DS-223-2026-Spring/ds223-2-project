@@ -20,7 +20,7 @@ Many businesses struggle with [state the marketing problem]. Our solution provid
 
 ## Solution Architecture
 
-![Star schema (example)](imgs/star_schema.png)
+![Your Product Schema](link_to_architecture_diagram_if_any)
 
 **Microservice Components:**
 
