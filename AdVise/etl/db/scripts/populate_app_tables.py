@@ -120,7 +120,7 @@ def insert_audience(cur, campaign_ids):
 # PREDICTIONS
 # -------------------------
 def insert_predictions(cur, campaign_ids, ad_ids):
-    for i in range(min(len(campaign_ids), len(ad_ids))):
+    for cid, aid in zip(campaign_ids, ad_ids):
         insert(
             cur,
             "predictions",
@@ -135,8 +135,8 @@ def insert_predictions(cur, campaign_ids, ad_ids):
                 "predicted_metric"
             ],
             [
-                campaign_ids[i],
-                ad_ids[i],
+                cid,
+                aid,
                 round(random.uniform(0.01, 0.25), 4),
                 round(random.uniform(0.001, 0.1), 4),
                 round(random.uniform(10, 90), 2),
