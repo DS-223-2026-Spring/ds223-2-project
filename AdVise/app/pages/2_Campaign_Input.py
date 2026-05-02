@@ -1,53 +1,75 @@
 import streamlit as st
-from ui_components import page_header
+from ui_components import load_css, page_header, placeholder_box
 
 st.set_page_config(page_title="Campaign Input", layout="wide")
+load_css()
 
 page_header(
     "Campaign Input",
-    "Upload creatives and enter campaign details."
+    "Prepare campaign information and creative assets for prediction."
 )
 
-left, right = st.columns([1, 2])
+left, right = st.columns([1.1, 1.9], gap="large")
 
 with left:
-    st.subheader("Creative Upload Area")
+    st.markdown("### Creative Assets")
 
     uploaded_files = st.file_uploader(
         "Upload 1–3 creatives",
-        accept_multiple_files=True
+        accept_multiple_files=True,
+        type=["png", "jpg", "jpeg", "mp4"]
     )
 
     if uploaded_files:
         st.success(f"{len(uploaded_files)} file(s) uploaded")
     else:
-        st.info("Upload area placeholder for campaign images or videos.")
+        st.info("Upload campaign image or video creatives.")
+
+    placeholder_box(
+        "Creative Preview",
+        "Uploaded creative preview will appear here."
+    )
 
 with right:
-    st.subheader("Campaign Form")
+    st.markdown("### Campaign Details")
 
-    col1, col2 = st.columns(2)
+    with st.container(border=True):
+        col1, col2 = st.columns(2)
 
-    with col1:
-        budget = st.number_input("Budget", min_value=0)
-        platform = st.selectbox("Platform", ["Instagram", "Facebook", "TikTok"])
-        campaign_intent = st.selectbox(
-            "Campaign Intent",
-            ["Sales", "Awareness", "Traffic", "Leads", "Engagement"]
-        )
+        with col1:
+            budget = st.number_input("Budget", min_value=0)
+            platform = st.selectbox(
+                "Platform",
+                ["Instagram", "Facebook", "TikTok", "Google Ads"]
+            )
+            campaign_intent = st.selectbox(
+                "Campaign Intent",
+                ["Sales", "Awareness", "Traffic", "Leads", "Engagement"]
+            )
 
-    with col2:
-        duration = st.number_input("Duration", min_value=1)
-        audience = st.selectbox("Audience", ["Cold", "Warm", "Hot"])
-        cta_type = st.selectbox("CTA Type", ["Buy Now", "Sign Up", "Learn More", "Go to Page"])
+        with col2:
+            duration = st.number_input("Duration", min_value=1)
+            audience = st.selectbox("Audience", ["Cold", "Warm", "Hot"])
+            cta_type = st.selectbox(
+                "CTA Type",
+                ["Buy Now", "Sign Up", "Learn More", "Go to Page"]
+            )
 
-st.divider()
+    st.markdown("### Campaign Summary")
 
-st.subheader("Filters Placeholder")
-st.write("Future filters for platform, audience type, campaign intent, and creative type will appear here.")
+    with st.container(border=True):
+        s1, s2, s3 = st.columns(3)
 
-st.subheader("Form Summary Placeholder")
-st.write("A summary of entered campaign data will be shown here before submitting.")
+        with s1:
+            st.metric("Budget", f"${budget}")
+            st.metric("Duration", f"{duration} days")
 
-if st.button("Run Prediction"):
-    st.success("Prediction placeholder. Backend connection will be added later.")
+        with s2:
+            st.metric("Platform", platform)
+            st.metric("Audience", audience)
+
+        with s3:
+            st.metric("Intent", campaign_intent)
+            st.metric("CTA", cta_type)
+
+    st.button("Run Prediction", use_container_width=True)

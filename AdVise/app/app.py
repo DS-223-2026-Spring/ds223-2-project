@@ -1,4 +1,5 @@
 import streamlit as st
+from ui_components import load_css, page_header, placeholder_box
 
 st.set_page_config(
     page_title="AdVise",
@@ -6,24 +7,30 @@ st.set_page_config(
     page_icon="📊"
 )
 
-st.markdown("""
-    <style>
-    .main {
-        background-color: #0e1117;
-    }
-    h1, h2, h3 {
-        color: #ffffff;
-    }
-    </style>
-""", unsafe_allow_html=True)
+load_css()
 
-st.title("📊 AdVise")
-st.subheader("Predict Before You Launch")
+page_header(
+    "AdVise",
+    "Predict campaign performance before launch."
+)
 
 st.write(
-    "AI-powered platform to evaluate campaign performance before spending budget."
+    "AdVise is an AI-powered marketing analytics platform that helps evaluate campaign creatives, "
+    "campaign inputs, predicted results, and recommendations before spending budget."
 )
 
 st.divider()
 
-st.info("Use the sidebar to navigate between pages.")
+col1, col2 = st.columns(2)
+
+with col1:
+    placeholder_box(
+        "Final App Layout",
+        "Use the sidebar to move between Home, Campaign Input, and Prediction Results pages."
+    )
+
+with col2:
+    placeholder_box(
+        "Backend Integration Area",
+        "The frontend layout is ready. Backend API and model outputs will be connected later."
+    )

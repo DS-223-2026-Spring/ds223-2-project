@@ -1,7 +1,15 @@
 import streamlit as st
-from ui_components import page_header, metric_card, creative_score, recommendation_card
+from ui_components import (
+    load_css,
+    page_header,
+    metric_card,
+    creative_score,
+    recommendation_card,
+    placeholder_box,
+)
 
 st.set_page_config(page_title="Prediction Results", layout="wide")
+load_css()
 
 page_header(
     "Prediction Results",
@@ -10,23 +18,35 @@ page_header(
 
 st.success("Best Creative: Creative A")
 
-st.subheader("Model Output Area")
-
-m1, m2, m3 = st.columns(3)
+m1, m2, m3, m4 = st.columns(4)
 
 with m1:
-    metric_card("Conversion Rate", "3.8%")
+    metric_card("CTR", "2.6%", "Predicted click-through rate")
 
 with m2:
-    metric_card("CTR", "2.6%")
+    metric_card("Conversion Rate", "3.8%", "Predicted conversion result")
 
 with m3:
-    metric_card("Engagement Score", "81/100")
+    metric_card("Engagement", "81/100", "Predicted engagement score")
+
+with m4:
+    metric_card("Reach Score", "74/100", "Estimated reach quality")
 
 st.divider()
 
-st.subheader("Charts Placeholder")
-st.write("Future charts for CTR, conversion rate, engagement, and creative performance will be displayed here.")
+left, right = st.columns(2)
+
+with left:
+    placeholder_box(
+        "Prediction Chart",
+        "Future chart for CTR, conversion rate, engagement, and reach."
+    )
+
+with right:
+    placeholder_box(
+        "Model Output Table",
+        "Backend prediction results will be displayed here."
+    )
 
 st.divider()
 
