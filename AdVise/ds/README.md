@@ -1,154 +1,86 @@
-# AdVise — Data Science (Milestone 2)
-
-## Overview
-This folder contains the exploratory data analysis and baseline modeling work
-for the AdVise ad performance prediction project. The goal is to predict
-**Click-Through Rate (CTR)** from campaign configuration and audience features.
+# AdVise - Data Science
+## Milestone 3: Final Model & Pipeline
 
 ---
 
-## Files
-| File | Description |
-|------|-------------|
-| `experiments.ipynb` | Main EDA and modeling notebook |
-| `modeling_related_files.py` | Placeholder for shared modeling utilities (future use) |
-| `requirements.txt` | Python dependencies |
-| `Dockerfile` | DS service container definition |
-| `README.md` | This file |
+## What's in this folder
+
+| File / Folder               | Description                                                         |
+|-----------------------------|---------------------------------------------------------------------|
+| `train.py`                  | Trains the final model and saves artifacts to `models/`             |
+| `predict.py`                | Loads model, runs predictions, saves results to `outputs/`          |
+| `creative_extract.py`       | Extracts features from ad creative images                           |
+| `modeling_related_files.py` | Shared feature definitions, preprocessing helpers, artifact loaders |
+| `pipeline_docs.md`          | Full pipeline documentation: features, models tried, results        |
+| `experiments.ipynb`         | Milestone 2 EDA and baseline model experiments                      |
+| `models/`                   | Saved model artifacts (`.pkl` files, git-ignored)                   |
+| `outputs/`                  | Prediction output CSVs (git-ignored)                                |
+| `requirements.txt`          | Required packages                                                   |
 
 ---
 
-## Running Jupyter in Docker
+## How to run
 
-The **`ds`** service in the **repository root** `docker-compose.yml` is assigned the Compose profile **`data-science`**. Services with a profile are **not** started by plain `docker compose up` / `docker compose up --build`; that is intentional so the default stack (database, ETL, API, Streamlit) stays the main path.
+Make sure you are inside the `ds/` folder and your virtual environment is active.
 
-From the **repository root**, start the DS container with:
-
+**1. Train the model:**
 ```bash
-docker compose --profile data-science up -d --build ds
+python train.py
+```
+Reads data from DB (falls back to CSV if DB is unavailable), trains a
+Random Forest Classifier, and saves `model.pkl`, `encoders.pkl`,
+and `feature_cols.pkl` to `models/`.
+
+**2. Run predictions:**
+```bash
+python predict.py
+```
+Loads the saved model, runs predictions on all campaign data, and saves
+`outputs/predictions.csv` with columns:
+- `predicted_ctr_tier` — Low / Medium / High
+- `confidence_score` — probability of the predicted class (0–1)
+- `performance_segment` — human-readable recommendation
+
+**3. Extract creative features from an image:**
+```bash
+python creative_extract.py --image path/to/image.jpg
+```
+Returns `creative_type`, `aspect_ratio`, `visual_complexity`, `has_person`.
+Designed to be imported by the orchestration layer:
+```python
+from creative_extract import extract_creative_features
+features = extract_creative_features("path/to/image.jpg")
 ```
 
-Open **http://localhost:8888** in a **normal browser** (Chrome, Safari, Firefox). Some IDE-embedded or Simple-Browser views can still show a “token or password” screen even when the server has auth disabled; use an external browser for the least hassle.
+---
 
-The **`ds`** service mounts the whole **`AdVise/`** tree at **`/advise`** in the container (not only `AdVise/ds/`), so paths like `../etl/db/...` and imports from `db_helpers` work the same as on your host, and the Jupyter file browser can list **ds**, **etl**, **api**, etc. After changing **`requirements.txt`**, rebuild: **`docker compose --profile data-science up -d --build ds`**. For Postgres from inside the container, start **`db`** on the same Compose project (e.g. full **`up`**) and keep a root **`.env`** with **`DB_NAME`**, **`DB_USER`**, **`DB_PASSWORD`**, and related variables.
+## Model summary
 
-To bring up **everything** (default services **and** Jupyter) in one command:
+| Model | Type | Metric | Score |
+|---|---|---|---|
+| Linear Regression (M2) | Regression | R² | 0.035 |
+| Ridge Regression (M2) | Regression | R² | 0.035 |
+| Random Forest Regressor (M2) | Regression | R² | 0.035 |
+| Gradient Boosting Regressor (M2) | Regression | R² | 0.035 |
+| Gradient Boosting Classifier (M3) | Classification | Accuracy | 0.377 |
+| **Random Forest Classifier (M3)** | **Classification** | **Accuracy** | **0.377** |
 
+Target: CTR binned into 3 equal-frequency tiers (Low / Medium / High).
+See `pipeline_docs.md` for full details.
+
+---
+
+## Requirements
+- pandas
+- numpy
+- scikit-learn
+- joblib
+- pillow
+- opencv-python
+
+See `requirements.txt` for the full list of dependencies.
+
+Install all with:
 ```bash
-docker compose --profile data-science up --build
+pip install -r requirements.txt
 ```
-
-See also the **Docker** section in the root **`README.md`**.
-
----
-
-## Data
-- **Primary source:** PostgreSQL DB via CRUD helpers (`etl/db/scripts/utils/db_helpers.py`)
-- **Fallback source:** `../etl/db/data_clean/training_dataset.csv` (used when DB is unavailable locally)
-- **Size:** 210,000 rows × 25 columns
-- **Synthetic data:** None — confirmed 100% real data (`is_synthetic = False`)
-
-### DB CRUD Integration
-The notebook uses `db_helpers.py` (added by the DB developer) to read from the
-database when running inside Docker. It connects and reads from four tables:
-`campaigns`, `ads`, `audience`, `predictions`.
-
-When running locally without Docker, it gracefully falls back to the CSV file.
-The full 210,000 row training dataset is used for EDA and modeling in both cases.
-
-### Key data quality findings
-- `budget` is constant (500.0 for all rows) — dropped as a feature
-- `engagement_score` has 10,000 missing values (4.76%) — imputed with median
-- No duplicate rows
-- No other missing values
-
----
-
-## Notebook Structure (`experiments.ipynb`)
-
-### Cell 1 — Imports
-All required libraries imported: pandas, numpy, matplotlib, seaborn, sklearn.
-
-### Cell 2 — DB CRUD Read (Task 5)
-Attempts to connect to PostgreSQL via `db_helpers.get_connection()` and reads
-all four app tables using `select_all()`. Falls back to CSV if DB is unavailable.
-
-### Cell 3 — Load Data + Basic EDA
-- Shape, column types, missing value counts, duplicate check
-- Numerical and categorical descriptive statistics
-
-### Cell 4 — Target Definition + Cleaning
-- Target variable: `ctr` (Click-Through Rate, continuous float)
-- Dropped `budget` (zero variance)
-- Imputed `engagement_score` NaNs with median
-
-### Cell 5 — Encoding
-- Label-encoded all categorical and boolean columns (16 total)
-- All columns verified numeric before modeling
-
-### Cell 6 — EDA Visualizations
-- CTR distribution histogram
-- CTR vs Conversion Rate scatter plot
-- Average CTR by Platform (bar chart)
-- Average CTR by Campaign Intent (bar chart)
-- Full correlation heatmap (encoded features)
-- Top 10 correlations with CTR
-
-### Cell 7 — Baseline Models
-Four regression models trained and compared on 80/20 train/test split:
-
-| Model | MAE | R² |
-|-------|-----|----|
-| Gradient Boosting | 0.086903 | 0.0350 |
-| Linear Regression | 0.089423 | 0.0048 |
-| Ridge Regression | 0.089423 | 0.0048 |
-| Random Forest (100 trees) | 0.093226 | 0.0006 |
-
-**Best model: Gradient Boosting** (R² = 0.035, MAE = 0.087)
-
-**Why R² scores are low:** CTR is a noisy real-world metric influenced by many
-factors not captured in the dataset (ad quality, timing, competition, etc.).
-Low R² at baseline is expected and normal. Linear models barely outperform a
-mean predictor (R² ~0.005), while Gradient Boosting captures some non-linear
-patterns (R² 0.035). Further feature engineering and hyperparameter tuning
-are recommended as next steps.
-
-### Cell 8 — Feature Importance + Documentation
-Random Forest feature importances ranked. Top 15 features identified.
-Full assumptions and target variable definition documented inline.
-
----
-
-## Top 15 Features (by Random Forest importance)
-1. `visual_complexity` — numerical score for ad creative complexity
-2. `reach_score` — estimated audience reach
-3. `duration_days` — campaign length in days
-4. `copy_text_length` — character length of ad copy
-5. `lead_rate` — ratio of leads generated
-6. `conversion_rate` — ratio of conversions
-7. `interests` — audience interest category
-8. `product_type` — advertised product category
-9. `engagement_score` — user engagement signal
-10. `career` — audience occupation segment
-11. `location` — target geographic region
-12. `platform` — ad platform (facebook, instagram, etc.)
-13. `campaign_intent` — campaign goal (awareness, leads, traffic, etc.)
-14. `age` — audience age group
-15. `creative_type` — ad format (video, image, etc.)
-
----
-
-## Key Findings
-- CTR ranges from ~0.001 to ~0.992, median ~0.096
-- `data_source` showed suspicious correlation with CTR (0.19) — likely a
-  data labeling artifact, excluded from models
-- Gradient Boosting is the most promising direction for further tuning
-- Visual and reach-related features dominate importance scores
-
----
-
-## Next Steps
-- Fix DB connection for local development (load `.env` correctly in notebook)
-- Hyperparameter tuning on Gradient Boosting
-- Feature engineering (interaction terms, binning)
-- Extract reusable functions into `modeling_related_files.py`
