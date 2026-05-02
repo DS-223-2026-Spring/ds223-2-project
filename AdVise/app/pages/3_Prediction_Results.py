@@ -3,7 +3,6 @@ from ui_components import (
     load_css,
     page_header,
     metric_card,
-    creative_score,
     recommendation_card,
     placeholder_box,
 )
@@ -13,70 +12,108 @@ load_css()
 
 page_header(
     "Prediction Results",
-    "Dashboard for predicted campaign performance and creative comparison."
+    "Ranked creative results, primary KPI, and recommendation blocks."
 )
 
-st.success("Best Creative: Creative A")
+result = st.session_state.get("prediction_result")
+payload = st.session_state.get("campaign_payload")
+
+if not result:
+    st.warning("No prediction result found yet. Please analyze a campaign first.")
+    placeholder_box(
+        "Waiting for Prediction Run",
+        "After the Campaign Input page submits to /v1/predictions/preview, results will appear here."
+    )
+    st.stop()
+
+best_creative = result.get("best_creative", "Creative A")
+primary_kpi = result.get("primary_kpi", "Predicted CTR")
+creatives = result.get("creatives", [])
+tips = result.get("tips", [])
+
+st.success(f"Best Creative: {best_creative}")
+
+if payload:
+    with st.expander("Campaign submitted for analysis", expanded=False):
+        st.json(payload)
+
+st.divider()
 
 m1, m2, m3, m4 = st.columns(4)
 
+top_creative = creatives[0] if creatives else {}
+
 with m1:
-    metric_card("CTR", "2.6%", "Predicted click-through rate")
+    metric_card("Primary KPI", primary_kpi, "Main optimization target")
 
 with m2:
-    metric_card("Conversion Rate", "3.8%", "Predicted conversion result")
+    metric_card("Top CTR", top_creative.get("ctr", "2.8%"), "Best predicted CTR")
 
 with m3:
-    metric_card("Engagement", "81/100", "Predicted engagement score")
+    metric_card(
+        "Top Conversion",
+        top_creative.get("conversion_rate", "3.9%"),
+        "Best predicted conversion"
+    )
 
 with m4:
-    metric_card("Reach Score", "74/100", "Estimated reach quality")
-
-st.divider()
-
-left, right = st.columns(2)
-
-with left:
-    placeholder_box(
-        "Prediction Chart",
-        "Future chart for CTR, conversion rate, engagement, and reach."
-    )
-
-with right:
-    placeholder_box(
-        "Model Output Table",
-        "Backend prediction results will be displayed here."
+    metric_card(
+        "Top Engagement",
+        f"{top_creative.get('engagement_score', 86)}/100",
+        "Best engagement score"
     )
 
 st.divider()
 
-left, right = st.columns(2)
+st.markdown("### Creative Ranking")
+
+if creatives:
+    cols = st.columns(len(creatives))
+
+    for col, creative in zip(cols, creatives):
+        with col:
+            with st.container(border=True):
+                st.markdown(f"### Rank #{creative.get('rank')}")
+                st.markdown(f"**{creative.get('name')}**")
+                st.metric("CTR", creative.get("ctr"))
+                st.metric("Conversion", creative.get("conversion_rate"))
+                st.metric("Engagement", f"{creative.get('engagement_score')}/100")
+                st.info(creative.get("recommendation"))
+else:
+    placeholder_box(
+        "Creative Ranking",
+        "Rank #1–#3 creative cards will appear here after backend scoring."
+    )
+
+st.divider()
+
+left, right = st.columns(2, gap="large")
 
 with left:
-    st.subheader("Creative Comparison")
-
-    creative_score(
-        "Creative A",
-        "Winning creative with strong CTA and clear product focus.",
-        91
-    )
-
-    creative_score(
-        "Creative B",
-        "Good alternative, but CTA placement can be improved.",
-        83
-    )
-
-    creative_score(
-        "Creative C",
-        "Needs improvement because text density is high.",
-        78
+    placeholder_box(
+        "Prediction Visualization",
+        "Future chart comparing CTR, conversion rate, engagement score, and reach score by creative."
     )
 
 with right:
-    st.subheader("Recommendations")
+    st.markdown("### Recommendation Blocks")
 
-    recommendation_card("Launch with Creative A as the primary asset.")
-    recommendation_card("Improve CTA visibility for better conversion.")
-    recommendation_card("Reduce text density in weaker creatives.")
-    recommendation_card("Keep campaign messaging aligned with selected intent.")
+    if tips:
+        for tip in tips:
+            recommendation_card(tip)
+    else:
+        recommendation_card("Recommendation blocks will appear here after model scoring.")
+
+st.divider()
+
+st.markdown("### PM Endpoint Mapping")
+
+with st.container(border=True):
+    st.write("This screen is prepared for:")
+    st.code(
+        """
+POST /v1/predictions/preview
+GET  /v1/prediction-runs/{run_id}
+        """,
+        language="text"
+    )
