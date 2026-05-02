@@ -1,9 +1,8 @@
 import streamlit as st
-from ui_components import load_css, page_header, placeholder_box
+from ui_components import page_header, placeholder_box
 from api_client import get_status, get_enums, submit_preview_prediction
 
 st.set_page_config(page_title="Campaign Input", layout="wide")
-load_css()
 
 page_header(
     "Campaign Input",
@@ -31,7 +30,7 @@ with left:
         "Upload 1–3 creatives",
         accept_multiple_files=True,
         type=["png", "jpg", "jpeg", "mp4"],
-        help="PM requirement: max creative count should later come from /v1/status."
+        help="Maximum creative count will later come from /v1/status."
     )
 
     if uploaded_files:
@@ -53,7 +52,7 @@ st.divider()
 st.markdown("### Step 2 — Campaign Details")
 
 with st.container(border=True):
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3 = st.columns(3, gap="large")
 
     with col1:
         campaign_name = st.text_input("Campaign Name")
@@ -61,10 +60,7 @@ with st.container(border=True):
         platform = st.selectbox("Platform", enums["platforms"])
 
     with col2:
-        campaign_intent = st.selectbox(
-            "Campaign Intent",
-            enums["campaign_intents"]
-        )
+        campaign_intent = st.selectbox("Campaign Intent", enums["campaign_intents"])
         cta_type = st.selectbox("CTA Type", enums["cta_types"])
         audience_temperature = st.selectbox(
             "Audience Temperature",
@@ -81,7 +77,7 @@ st.divider()
 st.markdown("### Step 3 — Review Before Analysis")
 
 with st.container(border=True):
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4 = st.columns(4, gap="large")
 
     with c1:
         st.metric("Platform", platform)
@@ -98,6 +94,55 @@ with st.container(border=True):
     with c4:
         st.metric("Device", device)
         st.metric("Customer", customer_type)
+
+st.divider()
+
+st.subheader("Prepared Filter Area")
+
+filter_col1, filter_col2, filter_col3 = st.columns(3, gap="large")
+
+with filter_col1:
+    st.selectbox("Preview Filter: Platform", ["All", platform])
+
+with filter_col2:
+    st.selectbox("Preview Filter: Audience", ["All", audience_temperature])
+
+with filter_col3:
+    st.selectbox("Preview Filter: Intent", ["All", campaign_intent])
+
+st.divider()
+
+st.subheader("Prepared Data Table Area")
+
+st.dataframe(
+    {
+        "Field": [
+            "Campaign Name",
+            "Budget",
+            "Platform",
+            "Intent",
+            "CTA Type",
+            "Audience",
+            "Duration",
+            "Device",
+            "Customer Type",
+            "Uploaded Creatives",
+        ],
+        "Value": [
+            campaign_name if campaign_name else "Not entered",
+            f"${budget}",
+            platform,
+            campaign_intent,
+            cta_type,
+            audience_temperature,
+            f"{duration} days",
+            device,
+            customer_type,
+            len(uploaded_files) if uploaded_files else 0,
+        ],
+    },
+    use_container_width=True,
+)
 
 st.divider()
 
