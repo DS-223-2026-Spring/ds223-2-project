@@ -10,6 +10,10 @@ from routes.predictions import router as predictions_router
 from routes.training_dataset import router as training_dataset_router
 from routes.meta import router as meta_router
 from routes.predictions_preview import router as predictions_preview_router
+from routes.campaigns_v1 import router as campaigns_v1_router
+from routes.ads_v1 import router as ads_v1_router
+from routes.audience_v1 import router as audience_v1_router
+from routes.predictions_v1 import router as predictions_v1_router
 
 
 app = FastAPI(title="AdVise API", description="AdVise backend", version="0.1.0")
@@ -24,6 +28,10 @@ app.include_router(predictions_router)
 app.include_router(training_dataset_router)
 app.include_router(meta_router)
 app.include_router(predictions_preview_router)
+app.include_router(campaigns_v1_router)
+app.include_router(ads_v1_router)
+app.include_router(audience_v1_router)
+app.include_router(predictions_v1_router)
 
 
 @app.get("/")
