@@ -1,8 +1,9 @@
 from fastapi import APIRouter
+from schema import MetaEnumsResponse
 
 router = APIRouter(prefix="/v1/meta", tags=["meta"])
 
-@router.get("/enums")
+@router.get("/enums", response_model=MetaEnumsResponse)
 def get_enums():
     return {
         "platforms": ["Instagram", "Facebook", "TikTok", "YouTube", "Google Ads"],
