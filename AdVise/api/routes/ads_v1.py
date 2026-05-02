@@ -9,6 +9,9 @@ router = APIRouter(prefix="/v1/ads", tags=["ads"])
 
 @router.get("/")
 def get_ads(db: Session = Depends(get_db)):
+    """
+    Return ad creative records from the PostgreSQL ads table.
+    """
     query = text("""
         SELECT *
         FROM ads

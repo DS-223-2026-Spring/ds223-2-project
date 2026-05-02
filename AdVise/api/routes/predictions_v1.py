@@ -9,6 +9,9 @@ router = APIRouter(prefix="/v1/predictions", tags=["predictions"])
 
 @router.get("/")
 def get_predictions(db: Session = Depends(get_db)):
+    """
+    Return prediction records from the PostgreSQL predictions table.
+    """
     query = text("""
         SELECT *
         FROM predictions

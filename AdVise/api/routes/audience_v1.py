@@ -9,6 +9,9 @@ router = APIRouter(prefix="/v1/audience", tags=["audience"])
 
 @router.get("/")
 def get_audience(db: Session = Depends(get_db)):
+    """
+    Return audience records from the PostgreSQL audience table.
+    """
     query = text("""
         SELECT *
         FROM audience

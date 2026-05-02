@@ -12,6 +12,9 @@ def service_status():
 
 @router.get("/v1/status", response_model=StatusResponse)
 def v1_status():
+    """
+    Return backend health information and basic runtime limits.
+    """
     return {
         "status": "ok",
         "backend": "connected",

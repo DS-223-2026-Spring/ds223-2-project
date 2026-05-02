@@ -5,6 +5,9 @@ router = APIRouter(prefix="/v1/meta", tags=["meta"])
 
 @router.get("/enums", response_model=MetaEnumsResponse)
 def get_enums():
+    """
+    Return canonical dropdown values used by the frontend campaign form.
+    """
     return {
         "platforms": ["Instagram", "Facebook", "TikTok", "YouTube", "Google Ads"],
         "campaign_intents": ["awareness", "engagement", "conversion", "lead_generation"],

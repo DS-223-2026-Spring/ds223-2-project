@@ -14,6 +14,9 @@ prediction_runs = {}
 
 @router.post("/predictions/preview", response_model=PredictionPreviewResponse)
 def preview_prediction(payload: PredictionPreviewRequest):
+    """
+    Validate campaign input and return placeholder prediction recommendations.
+    """
     run_id = str(uuid4())
 
     result = {
@@ -43,6 +46,9 @@ def preview_prediction(payload: PredictionPreviewRequest):
 
 @router.get("/prediction-runs/{run_id}", response_model=PredictionRunResponse)
 def get_prediction_run(run_id: str):
+    """
+    Return the status and stored result for a prediction run.
+    """
     if run_id not in prediction_runs:
         return {
             "run_id": run_id,

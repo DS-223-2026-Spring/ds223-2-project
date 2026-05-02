@@ -9,6 +9,9 @@ router = APIRouter(prefix="/v1/campaigns", tags=["campaigns"])
 
 @router.get("/")
 def get_campaigns(db: Session = Depends(get_db)):
+    """
+    Return campaign records from the PostgreSQL campaigns table.
+    """
     query = text("""
         SELECT
             campaign_id,
