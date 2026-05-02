@@ -37,9 +37,22 @@ python predict.py
 ```
 Loads the saved model, runs predictions on all campaign data, and saves
 `outputs/predictions.csv` with columns:
-- `predicted_ctr_tier` — Low / Medium / High
+- `predicted_{target}_tier` — Low / Medium / High (target depends on campaign_intent)
 - `confidence_score` — probability of the predicted class (0–1)
 - `performance_segment` — human-readable recommendation
+- `target` — which KPI was predicted for that row
+
+Target is selected automatically based on `campaign_intent`:
+- `awareness` → reach_score
+- `sales` / `leads` → conversion_rate
+- `traffic` / `engagement` → ctr
+
+You can also force a specific target:
+```bash
+python predict.py --target ctr
+python predict.py --target conversion_rate
+python predict.py --target reach_score
+```
 
 **3. Extract creative features from an image:**
 ```bash
@@ -56,14 +69,16 @@ features = extract_creative_features("path/to/image.jpg")
 
 ## Model summary
 
-| Model | Type | Metric | Score |
-|---|---|---|---|
-| Linear Regression (M2) | Regression | R² | 0.035 |
-| Ridge Regression (M2) | Regression | R² | 0.035 |
-| Random Forest Regressor (M2) | Regression | R² | 0.035 |
-| Gradient Boosting Regressor (M2) | Regression | R² | 0.035 |
-| Gradient Boosting Classifier (M3) | Classification | Accuracy | 0.377 |
-| **Random Forest Classifier (M3)** | **Classification** | **Accuracy** | **0.377** |
+| Model                                    | Type | Metric | Score |
+|------------------------------------------|---|---|---|
+| Linear Regression (M2)                   | Regression | R² | 0.035 |
+| Ridge Regression (M2)                    | Regression | R² | 0.035 |
+| Random Forest Regressor (M2)             | Regression | R² | 0.035 |
+| Gradient Boosting Regressor (M2)         | Regression | R² | 0.035 |
+| Gradient Boosting Classifier (M3)        | Classification | Accuracy | 0.377 |
+| **Random Forest - CTR (M3)**             | **Classification** | **Accuracy** | **0.37** |
+| **Random Forest - Conversion Rate (M3)** | **Classification** | **Accuracy** | **0.37** |
+| **Random Forest - Reach Score (M3)**     | **Classification** | **Accuracy** | **0.34** |
 
 Target: CTR binned into 3 equal-frequency tiers (Low / Medium / High).
 See `pipeline_docs.md` for full details.

@@ -19,10 +19,10 @@ from modeling_related_files import (
     load_model,
     load_encoders,
     preprocess_for_inference,
-    FEATURE_COLS,
     DROP_COLS,
     IMPUTE_MEDIAN_COLS,
     TARGET,
+    INTENT_TO_TARGET,
 )
 
 # ── paths ──────────────────────────────────────────────────────────────────────
@@ -87,7 +87,7 @@ def load_data(csv_path: str) -> pd.DataFrame:
 # ──────────────────────────────────────────────────────────────────────────────
 # 2. PREDICT
 # ──────────────────────────────────────────────────────────────────────────────
-def run_predictions(df: pd.DataFrame, model, encoders: dict) -> pd.DataFrame:
+def run_predictions(df: pd.DataFrame, model, encoders: dict, target: str = "ctr") -> pd.DataFrame:
     """
     Run model predictions and return a results dataframe with:
     - ctr_tier: predicted class (low / medium / high)
@@ -98,7 +98,7 @@ def run_predictions(df: pd.DataFrame, model, encoders: dict) -> pd.DataFrame:
     id_col = df["campaign_id"] if "campaign_id" in df.columns else None
 
     # Keep actual CTR if available (for reference)
-    actual_ctr = df[TARGET] if TARGET in df.columns else None
+    actual_ctr = df[target] if target in df.columns else None
 
     # Preprocess
     X = preprocess_for_inference(df, encoders)
@@ -112,13 +112,13 @@ def run_predictions(df: pd.DataFrame, model, encoders: dict) -> pd.DataFrame:
 
     # Build results dataframe
     results = pd.DataFrame({
-        "predicted_ctr_tier":  predicted_tier,
-        "confidence_score":    confidence,
+        f"predicted_{target}_tier": predicted_tier,
+        "confidence_score": confidence,
     })
 
     # Add actual CTR for reference if available
     if actual_ctr is not None:
-        results.insert(0, "actual_ctr", actual_ctr.values)
+        results.insert(0, f"actual_{target}", actual_ctr.values)
 
     # Add campaign_id if available
     if id_col is not None:
@@ -130,7 +130,7 @@ def run_predictions(df: pd.DataFrame, model, encoders: dict) -> pd.DataFrame:
         "medium": "Average Performer — consider optimizing",
         "low":    "Weak Performer — do not recommend",
     }
-    results["performance_segment"] = results["predicted_ctr_tier"].map(segment_map)
+    results["performance_segment"] = results[f"predicted_{target}_tier"].map(segment_map)
 
     return results
 
@@ -202,25 +202,43 @@ if __name__ == "__main__":
         default=os.path.join(OUTPUTS_DIR, "predictions.csv"),
         help="Where to save the predictions CSV",
     )
+    parser.add_argument(
+        "--target",
+        default=None,
+        choices=["ctr", "conversion_rate", "reach_score"],
+        help="Which target to predict. If not set, uses campaign_intent to decide.",
+    )
     args = parser.parse_args()
 
-    # 1. Load model artifacts
-    print("Loading model artifacts...")
-    model    = load_model()
-    encoders = load_encoders()
-    print("Model and encoders loaded.")
-
-    # 2. Load data
+    # 1. Load data
     df = load_data(args.data_path)
 
-    # 3. Predict
-    print("\nRunning predictions...")
-    results = run_predictions(df, model, encoders)
+    # 2. Decide target per row based on campaign_intent (or use override)
+    if args.target:
+        # Single target forced by user
+        targets_to_run = [args.target]
+        df["_target"] = args.target
+    else:
+        # Map each row's campaign_intent to the right target
+        df["_target"] = df["campaign_intent"].map(INTENT_TO_TARGET).fillna("ctr")
+        targets_to_run = df["_target"].unique().tolist()
 
-    # 4. Save to CSV
-    save_to_csv(results, args.output_path)
+    all_results = []
 
-    # 5. Try writing back to DB
-    write_to_db(results)
+    for target in targets_to_run:
+        print(f"\nPredicting target: {target}")
+        subset = df[df["_target"] == target].copy()
+
+        model    = load_model(target)
+        encoders = load_encoders(target)
+
+        results = run_predictions(subset, model, encoders, target=target)
+        results["target"] = target
+        all_results.append(results)
+
+    # 3. Combine and save
+    final = pd.concat(all_results, ignore_index=True)
+    save_to_csv(final, args.output_path)
+    write_to_db(final)
 
     print("\nDone.")

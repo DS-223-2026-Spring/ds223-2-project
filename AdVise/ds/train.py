@@ -32,6 +32,9 @@ TARGET        = "ctr"
 DROP_COLS     = ["budget", "is_synthetic", "data_source"]
 IMPUTE_MEDIAN = ["engagement_score"]
 
+# All targets we train models for
+TRAIN_TARGETS = ["ctr", "conversion_rate", "reach_score"]
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 1. DATA LOADING
@@ -88,14 +91,14 @@ def load_data(csv_path: str) -> pd.DataFrame:
 # ──────────────────────────────────────────────────────────────────────────────
 # 2. PREPROCESSING
 # ──────────────────────────────────────────────────────────────────────────────
-def preprocess(df: pd.DataFrame):
+def preprocess(df: pd.DataFrame, target: str):
     """
-    Clean, impute, encode.
-    Returns X, y, list of feature column names, and dict of fitted encoders.
+    Clean, impute, encode for a given target.
+    Returns X, y, feature_cols, encoders.
     """
     df = df.copy()
 
-    # Drop constant / metadata columns that exist
+    # Drop metadata columns
     cols_to_drop = [c for c in DROP_COLS if c in df.columns]
     df = df.drop(columns=cols_to_drop)
 
@@ -104,16 +107,19 @@ def preprocess(df: pd.DataFrame):
         if col in df.columns:
             df[col] = df[col].fillna(df[col].median())
 
-    # Bin CTR into 3 performance tiers BEFORE separating X
-    y_raw = df[TARGET].copy()
+    # Bin the target into 3 tiers
+    y_raw = df[target].copy()
     y = pd.qcut(y_raw, q=3, labels=["low", "medium", "high"])
     y = y.astype(str)
-    print(f"\nCTR tier distribution:\n{y.value_counts()}")
+    print(f"\nTier distribution for '{target}':\n{y.value_counts()}")
 
-    # NOW separate X (after y is done)
-    X = df.drop(columns=[TARGET])
+    # Drop ALL targets from X so none leak into features
+    all_targets = ["ctr", "conversion_rate", "reach_score",
+                   "engagement_score", "lead_rate"]
+    cols_to_remove = [c for c in all_targets if c in df.columns and c != target]
+    X = df.drop(columns=[target] + cols_to_remove)
 
-    # Encode categoricals + booleans
+    # Encode categoricals
     cat_cols = X.select_dtypes(include=["object", "bool", "str"]).columns.tolist()
     encoders = {}
     for col in cat_cols:
@@ -203,25 +209,34 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # 1. Load
+    # 1. Load once
     df = load_data(args.data_path)
 
-    # 2. Preprocess
-    X, y, feature_cols, encoders = preprocess(df)
+    # 2. Train a model for each target
+    for target in TRAIN_TARGETS:
+        print(f"\n{'='*50}")
+        print(f"  Training model for target: {target}")
+        print(f"{'='*50}")
 
-    # 3. Split
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
-    print(f"\nTrain size: {len(X_train):,}   Test size: {len(X_test):,}")
+        # Preprocess
+        X, y, feature_cols, encoders = preprocess(df, target)
 
-    # 4. Train
-    best_model = train(X_train, y_train)
+        # Split
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42
+        )
+        print(f"Train size: {len(X_train):,}   Test size: {len(X_test):,}")
 
-    # 5. Evaluate
-    evaluate(best_model, X_test, y_test, label="RandomForest (tuned)")
+        # Train
+        best_model = train(X_train, y_train)
 
-    # 6. Save
-    save_artifacts(best_model, encoders, feature_cols)
+        # Evaluate
+        evaluate(best_model, X_test, y_test, label=f"RandomForest ({target})")
 
-    print("\nDone. Model is ready.")
+        # Save — separate file per target
+        joblib.dump(best_model,  os.path.join(MODELS_DIR, f"model_{target}.pkl"))
+        joblib.dump(encoders,    os.path.join(MODELS_DIR, f"encoders_{target}.pkl"))
+        joblib.dump(feature_cols,os.path.join(MODELS_DIR, f"feature_cols_{target}.pkl"))
+        print(f"Saved model_{target}.pkl, encoders_{target}.pkl, feature_cols_{target}.pkl")
+
+    print("\nAll models trained and saved.")
