@@ -1,6 +1,9 @@
 numpy
 pandas
 matplotlib
+prefect>=2.14
+pillow>=10.0
+opencv-python-headless>=4.9.0
 seaborn
 scikit-learn
 psycopg2-binary
