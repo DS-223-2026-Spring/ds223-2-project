@@ -91,3 +91,60 @@ class TrainingDatasetCreate(TrainingDatasetBase):
 class TrainingDatasetResponse(TrainingDatasetBase):
     id: int
     
+from typing import Any, Dict, List, Optional
+
+class MetaEnumsResponse(BaseModel):
+    platforms: List[str]
+    campaign_intents: List[str]
+    cta_types: List[str]
+    audience_temperature: List[str]
+    devices: List[str]
+    customer_types: List[str]
+    product_types: List[str]
+    regions: List[str]
+    age_bands: List[str]
+
+
+class StatusResponse(BaseModel):
+    status: str
+    backend: str
+    model_version: str
+    max_creatives: int
+    upload_limits: Dict[str, Any]
+    prefect_available: bool
+
+
+class PredictionPreviewRequest(BaseModel):
+    platform: str
+    campaign_intent: str
+    product_type: str
+    cta_type: str
+    audience_temperature: str
+    customer_type: str
+    budget: float
+    duration_days: int
+    creative_count: Optional[int] = 1
+
+
+class RecommendationBlock(BaseModel):
+    rank: int
+    primary_kpi: str
+    score: float
+    hint: str
+
+
+class PredictionPreviewResponse(BaseModel):
+    run_id: str
+    status: str
+    model_version: str
+    campaign_intent: str
+    target_metric: str  # ctr | conversion_rate | reach_score
+    target_label: str
+    predicted_tier: Optional[str] = None
+    prediction_confidence: Optional[float] = None
+    recommendations: List[RecommendationBlock]
+    input_summary: Dict[str, Any]
+
+
+class PredictionRunResponse(PredictionPreviewResponse):
+    pass
