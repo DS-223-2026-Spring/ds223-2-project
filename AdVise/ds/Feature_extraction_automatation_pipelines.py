@@ -62,4 +62,4 @@ if __name__ == "__main__":
     process_new_creative_flow(test_image_path, campaign_id=101)
     
     # 2. DEPLOYMENT RUN (Uncomment this line below to create a deployment)
-    # process_new_creative_flow.serve(name="creative-pipeline-deployment")
+    process_new_creative_flow.serve(name="creative-pipeline-deployment")
