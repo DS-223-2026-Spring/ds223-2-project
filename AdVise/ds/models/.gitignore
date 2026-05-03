@@ -1,0 +1,3 @@
+# Produced by DS training; mounted read-only into the API container.
+*
+!.gitignore

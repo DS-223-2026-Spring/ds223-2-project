@@ -55,10 +55,12 @@ services:
     container_name: fastapi_back
     volumes:
       - ./AdVise/api:/api
+      - ./AdVise/ds/models:/api/ds_models:ro
     ports:
       - 8008:8000
     environment:
       - DATABASE_URL=${DATABASE_URL}
+      - ADVISE_DS_MODELS=/api/ds_models
     env_file:
       - .env
     depends_on:
