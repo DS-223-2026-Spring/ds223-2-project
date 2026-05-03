@@ -137,6 +137,11 @@ class PredictionPreviewResponse(BaseModel):
     run_id: str
     status: str
     model_version: str
+    campaign_intent: str
+    target_metric: str  # ctr | conversion_rate | reach_score
+    target_label: str
+    predicted_tier: Optional[str] = None
+    prediction_confidence: Optional[float] = None
     recommendations: List[RecommendationBlock]
     input_summary: Dict[str, Any]
 
