@@ -13,7 +13,11 @@ def task_extract_features(image_path: str) -> dict:
     features = extract_creative_features(image_path)
     return features
 
-@task(name="Save Features to DB")
+@task(
+    name="Save Features to DB",
+    retries=3,
+    retry_delay_seconds=10,
+)
 def task_save_features(campaign_id: int, features: dict):
     # RELATIVE PATH: Dynamically find the path to your db_helpers file
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -61,5 +65,8 @@ if __name__ == "__main__":
     # 1. Standard local run
     process_new_creative_flow(test_image_path, campaign_id=101)
     
-    # 2. DEPLOYMENT RUN (Uncomment this line below to create a deployment)
-    process_new_creative_flow.serve(name="creative-pipeline-deployment")
+    # 2. DEPLOYMENT RUN (blocks; uncomment to register deployment + runner)
+    # process_new_creative_flow.serve(
+    #     name="creative-pipeline-deployment",
+    #     parameters={"image_path": test_image_path, "campaign_id": 101},
+    # )

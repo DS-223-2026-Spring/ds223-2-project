@@ -119,8 +119,18 @@ def preprocess(df: pd.DataFrame, target: str):
     cols_to_remove = [c for c in all_targets if c in df.columns and c != target]
     X = df.drop(columns=[target] + cols_to_remove)
 
-    # Encode categoricals
-    cat_cols = X.select_dtypes(include=["object", "bool", "str"]).columns.tolist()
+    # Encode categoricals — do not use ``include=["str"]`` in ``select_dtypes``; it fails on
+    # pandas StringDtype / recent pandas (use ``is_string_dtype`` instead).
+    cat_cols = [
+        c
+        for c in X.columns
+        if (
+            pd.api.types.is_object_dtype(X[c])
+            or pd.api.types.is_categorical_dtype(X[c])
+            or pd.api.types.is_bool_dtype(X[c])
+            or pd.api.types.is_string_dtype(X[c])
+        )
+    ]
     encoders = {}
     for col in cat_cols:
         le = LabelEncoder()

@@ -17,6 +17,8 @@ INTENT_TO_TARGET_METRIC: Dict[str, str] = {
     "leads": "conversion_rate",
     "traffic": "ctr",
     "engagement": "ctr",
+    "conversion": "conversion_rate",
+    "lead_generation": "conversion_rate",
 }
 
 TARGET_LABELS: Dict[str, str] = {

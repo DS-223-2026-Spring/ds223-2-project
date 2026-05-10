@@ -1,4 +1,7 @@
 """Core / misc routes (add more groups here)."""
+
+import os
+
 from fastapi import APIRouter
 from schema import StatusResponse
 
@@ -24,5 +27,6 @@ def v1_status():
             "max_file_size_mb": 10,
             "allowed_types": ["png", "jpg", "jpeg", "pdf"]
         },
-        "prefect_available": False
+        "prefect_available": os.getenv("ADVISE_PREFECT_AVAILABLE", "").lower()
+        in ("1", "true", "yes"),
     }

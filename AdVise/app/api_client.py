@@ -1,6 +1,9 @@
+import os
+
 import requests
 
-API_BASE_URL = "http://localhost:8000"
+# In Docker Compose, `front` sets API_URL=http://back:8000. On the host, mapped port is 8008.
+API_BASE_URL = os.environ.get("API_URL", "http://localhost:8008").rstrip("/")
 
 
 def get_status():
@@ -19,23 +22,41 @@ def get_enums():
     except requests.exceptions.RequestException:
         pass
 
+    # Offline fallback — same vocabulary as API ``_static_enums`` / ``training_vocab`` pools.
     return {
-        "platforms": ["Instagram", "Facebook", "TikTok", "Google Ads"],
-        "campaign_intents": ["Sales", "Awareness", "Traffic", "Leads", "Engagement"],
-        "cta_types": ["Buy Now", "Sign Up", "Learn More", "Go to Page"],
-        "audience_temperatures": ["Cold", "Warm", "Hot"],
-        "devices": ["Mobile", "Desktop", "Tablet"],
-        "customer_types": ["New", "Returning"],
+        "platforms": ["facebook", "instagram", "google", "tiktok", "youtube"],
+        "campaign_intents": ["sales", "awareness", "traffic", "leads", "engagement"],
+        "cta_types": ["buy_now", "learn_more", "sign_up", "go_to_page"],
+        "audience_temperature": ["cold", "warm", "hot"],
+        "devices": ["mobile", "desktop", "tablet"],
+        "customer_types": ["new", "returning"],
+        "product_types": [
+            "electronics",
+            "fashion",
+            "food",
+            "beauty",
+            "fitness",
+            "finance",
+            "travel",
+            "education",
+            "home",
+            "software",
+        ],
+        "regions": ["US", "UK", "India", "Canada", "Germany", "France", "Armenia"],
+        "age_bands": ["18-24", "25-34", "35-44", "45-54", "55+"],
     }
 
 
-def submit_preview_prediction(payload, files):
+def submit_preview_prediction(payload: dict):
+    """
+    POST /v1/predictions/preview with a JSON body (PredictionPreviewRequest).
+    Include optional ``creative_image_base64`` (first creative) so the API runs image extraction.
+    """
     try:
         response = requests.post(
             f"{API_BASE_URL}/v1/predictions/preview",
-            data=payload,
-            files=files,
-            timeout=30,
+            json=payload,
+            timeout=60,
         )
         return response.json(), response.status_code
     except requests.exceptions.RequestException:

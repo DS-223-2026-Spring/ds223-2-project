@@ -8,7 +8,7 @@ audience = {
 
     1: {
 
-        "age": 25,
+        "age": "25",
 
         "gender": "female",
 

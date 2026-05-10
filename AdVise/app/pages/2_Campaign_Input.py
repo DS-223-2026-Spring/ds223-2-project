@@ -1,3 +1,5 @@
+import base64
+
 import streamlit as st
 from ui_components import page_header, placeholder_box
 from api_client import get_status, get_enums, submit_preview_prediction
@@ -42,10 +44,30 @@ with left:
         st.info("Upload campaign images or videos.")
 
 with right:
-    placeholder_box(
-        "Creative Preview Area",
-        "Uploaded creative previews and extracted features will appear here."
+    st.subheader("Creative preview")
+    prev_result = st.session_state.get("prediction_result")
+    if uploaded_files:
+        first = uploaded_files[0]
+        if first.type and first.type.startswith("image/"):
+            st.image(first.getvalue(), caption="First creative (sent to API as base64)")
+        else:
+            st.info("First file is not an image; pixel features are skipped until video support lands.")
+    else:
+        st.caption("Upload an image to see a preview here.")
+
+    feats = (
+        prev_result.get("creative_features")
+        if isinstance(prev_result, dict)
+        else None
     )
+    if feats:
+        with st.expander("Last run: extracted creative features", expanded=True):
+            st.json(feats)
+    else:
+        placeholder_box(
+            "Extracted features",
+            "After **Analyze Campaign**, image extraction from the API appears here when Prefect/DS extraction succeeds.",
+        )
 
 st.divider()
 
@@ -64,7 +86,11 @@ with st.container(border=True):
         cta_type = st.selectbox("CTA Type", enums["cta_types"])
         audience_temperature = st.selectbox(
             "Audience Temperature",
-            enums["audience_temperatures"]
+            enums["audience_temperature"],
+        )
+        product_type = st.selectbox(
+            "Product Type",
+            enums.get("product_types", ["software"]),
         )
 
     with col3:
@@ -164,35 +190,31 @@ if analyze_clicked:
 
     else:
         payload = {
-            "campaign_name": campaign_name,
-            "budget": budget,
             "platform": platform,
             "campaign_intent": campaign_intent,
+            "product_type": product_type,
             "cta_type": cta_type,
             "audience_temperature": audience_temperature,
-            "duration": duration,
-            "device": device,
             "customer_type": customer_type,
+            "budget": float(budget),
+            "duration_days": int(duration),
+            "creative_count": min(3, len(uploaded_files)) if uploaded_files else 1,
         }
-
-        files = [
-            (
-                "files",
-                (
-                    file.name,
-                    file.getvalue(),
-                    file.type,
-                ),
-            )
-            for file in uploaded_files
-        ]
+        first = uploaded_files[0]
+        if first.type and first.type.startswith("image/"):
+            payload["creative_image_base64"] = base64.standard_b64encode(
+                first.getvalue()
+            ).decode("ascii")
 
         with st.status("Processing campaign prediction...", expanded=True):
-            st.write("Validating campaign payload.")
-            st.write("Preparing creative files.")
+            st.write("Validating campaign payload for /v1/predictions/preview (JSON).")
+            if "creative_image_base64" in payload:
+                st.write("Sending first image as base64 → API runs creative feature extraction.")
+            else:
+                st.write("Video / non-image creative: skipping pixel extraction.")
             st.write("Waiting for backend prediction response.")
 
-            result, response_code = submit_preview_prediction(payload, files)
+            result, response_code = submit_preview_prediction(payload)
 
         if response_code == 200 and result:
             st.session_state["prediction_result"] = result
