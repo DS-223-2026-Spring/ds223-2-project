@@ -1,2 +1,7 @@
 models/*.pkl
 outputs/*.csv
+
+!AdVise/ds/models/model.pkl
+!AdVise/ds/models/encoders.pkl
+!AdVise/ds/models/feature_cols.pkl
+!AdVise/ds/outputs/predictions.csv
