@@ -5,8 +5,9 @@ import os
 from dotenv import load_dotenv
 import json
 
-# Load environment variables dynamically
-load_dotenv()
+# Load `.env` from repo root when launched from AdVise/ds (cwd may not match).
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+load_dotenv(os.path.join(_REPO_ROOT, ".env"))
 
 @task(name="Extract Image Features", retries=2, retry_delay_seconds=5)
 def task_extract_features(image_path: str) -> dict:
@@ -57,16 +58,13 @@ def process_new_creative_flow(image_path: str, campaign_id: int):
     return "Pipeline completed successfully!"
 
 if __name__ == "__main__":
-    # RELATIVE PATH FOR TEST IMAGE: 
+    # RELATIVE PATH FOR TEST IMAGE:
     # This expects a file named 'test_image.jpg' in the exact same folder as this script.
     current_dir = os.path.dirname(os.path.abspath(__file__))
     test_image_path = os.path.join(current_dir, "test_image.jpg")
-    
+
     # 1. Standard local run
     process_new_creative_flow(test_image_path, campaign_id=101)
-    
-    # 2. DEPLOYMENT RUN (blocks; uncomment to register deployment + runner)
-    # process_new_creative_flow.serve(
-    #     name="creative-pipeline-deployment",
-    #     parameters={"image_path": test_image_path, "campaign_id": 101},
-    # )
+
+    # 2. DEPLOYMENT RUN (Uncomment this line below to create a deployment)
+    process_new_creative_flow.serve(name="creative-pipeline-deployment")
