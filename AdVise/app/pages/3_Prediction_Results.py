@@ -1,5 +1,9 @@
 import streamlit as st
-from ui_components import page_header, metric_card, creative_score, recommendation_card
+import pandas as pd
+import os
+import sys
+sys.path.append(os.path.dirname(__file__).replace("pages", ""))
+from ui_components import page_header, metric_card
 
 st.set_page_config(page_title="Prediction Results", layout="wide")
 
@@ -8,55 +12,103 @@ page_header(
     "Dashboard for predicted campaign performance and creative comparison."
 )
 
-st.success("Best Creative: Creative A")
+# ── paths ──────────────────────────────────────────────────────────────────────
+DS_OUTPUTS = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../ds/outputs"))
 
-st.subheader("Model Output Area")
+SUMMARY_PATH = os.path.join(DS_OUTPUTS, "summary_table.csv")
+CHARTS = {
+    "ctr":             os.path.join(DS_OUTPUTS, "chart_tier_distribution_ctr.png"),
+    "conversion_rate": os.path.join(DS_OUTPUTS, "chart_tier_distribution_conversion_rate.png"),
+    "reach_score":     os.path.join(DS_OUTPUTS, "chart_tier_distribution_reach_score.png"),
+    "confidence":      os.path.join(DS_OUTPUTS, "chart_confidence_distribution.png"),
+    "segment":         os.path.join(DS_OUTPUTS, "chart_segment_summary.png"),
+    "fi_ctr":          os.path.join(DS_OUTPUTS, "chart_feature_importance_ctr.png"),
+    "fi_conversion":   os.path.join(DS_OUTPUTS, "chart_feature_importance_conversion_rate.png"),
+    "fi_reach":        os.path.join(DS_OUTPUTS, "chart_feature_importance_reach_score.png"),
+}
 
-m1, m2, m3 = st.columns(3)
+# ── load summary ───────────────────────────────────────────────────────────────
+@st.cache_data
+def load_summary():
+    if os.path.exists(SUMMARY_PATH):
+        return pd.read_csv(SUMMARY_PATH)
+    return None
 
-with m1:
-    metric_card("Conversion Rate", "3.8%")
+summary = load_summary()
 
-with m2:
-    metric_card("CTR", "2.6%")
+# ── SECTION 1: KPI metrics from summary table ─────────────────────────────────
+st.subheader("Model Summary")
 
-with m3:
-    metric_card("Engagement Score", "81/100")
+if summary is not None:
+    cols = st.columns(len(summary))
+    for i, row in summary.iterrows():
+        with cols[i]:
+            st.metric(label=f"{row['target'].upper()} — Avg Confidence",
+                      value=f"{float(row['avg_confidence']):.2%}")
+            st.caption(f"High: {row['high_pct']}% | Mid: {row['medium_pct']}% | Low: {row['low_pct']}%")
+            st.caption(f"Total predictions: {int(row['total_predictions']):,}")
+else:
+    st.warning("Summary table not found. Run predict.py and generate_visuals.py first.")
 
 st.divider()
 
-st.subheader("Charts Placeholder")
-st.write("Future charts for CTR, conversion rate, engagement, and creative performance will be displayed here.")
+# ── SECTION 2: Tier distribution charts ───────────────────────────────────────
+st.subheader("Predicted Tier Distributions")
+
+c1, c2, c3 = st.columns(3)
+for col, key, label in [
+    (c1, "ctr",             "CTR"),
+    (c2, "conversion_rate", "Conversion Rate"),
+    (c3, "reach_score",     "Reach Score"),
+]:
+    with col:
+        st.caption(label)
+        if os.path.exists(CHARTS[key]):
+            st.image(CHARTS[key], use_container_width=True)
+        else:
+            st.info(f"Chart not found: {key}")
 
 st.divider()
 
-left, right = st.columns(2)
+# ── SECTION 3: Confidence + Segment ───────────────────────────────────────────
+st.subheader("Confidence & Segments")
 
-with left:
-    st.subheader("Creative Comparison")
+c1, c2 = st.columns(2)
+with c1:
+    if os.path.exists(CHARTS["confidence"]):
+        st.image(CHARTS["confidence"], use_container_width=True)
+with c2:
+    if os.path.exists(CHARTS["segment"]):
+        st.image(CHARTS["segment"], use_container_width=True)
 
-    creative_score(
-        "Creative A",
-        "Winning creative with strong CTA and clear product focus.",
-        91
-    )
+st.divider()
 
-    creative_score(
-        "Creative B",
-        "Good alternative, but CTA placement can be improved.",
-        83
-    )
+# ── SECTION 4: Feature importance ─────────────────────────────────────────────
+st.subheader("Feature Importances")
 
-    creative_score(
-        "Creative C",
-        "Needs improvement because text density is high.",
-        78
-    )
+c1, c2, c3 = st.columns(3)
+for col, key, label in [
+    (c1, "fi_ctr",        "CTR"),
+    (c2, "fi_conversion", "Conversion Rate"),
+    (c3, "fi_reach",      "Reach Score"),
+]:
+    with col:
+        st.caption(label)
+        if os.path.exists(CHARTS[key]):
+            st.image(CHARTS[key], use_container_width=True)
+        else:
+            st.info(f"Chart not found: {key}")
 
-with right:
-    st.subheader("Recommendations")
+st.divider()
 
-    recommendation_card("Launch with Creative A as the primary asset.")
-    recommendation_card("Improve CTA visibility for better conversion.")
-    recommendation_card("Reduce text density in weaker creatives.")
-    recommendation_card("Keep campaign messaging aligned with selected intent.")
+# ── SECTION 5: Raw predictions table ──────────────────────────────────────────
+st.subheader("Predictions Data Sample")
+
+pred_path = os.path.join(DS_OUTPUTS, "predictions.csv")
+if os.path.exists(pred_path):
+    df = pd.read_csv(pred_path, low_memory=False, nrows=500)
+    pred_cols = [c for c in df.columns if c.startswith("predicted_") or
+                 c in ["confidence_score", "performance_segment", "target"]]
+    st.dataframe(df[pred_cols].head(50), use_container_width=True)
+else:
+    st.info("predictions.csv not found. Run predict.py first.")
