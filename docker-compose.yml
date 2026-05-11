@@ -1,4 +1,6 @@
 services:
+# Optional: add "batch-visuals" to COMPOSE_PROFILES in .env so `docker compose up --build` runs
+# ds_batch_visuals once and fills AdVise/ds/outputs with charts (slow on large data).
 
   db:
     container_name: postgresql_db
@@ -79,12 +81,40 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./AdVise/app:/app
+      # Offline charts from DS (predict.py / generate_visuals.py) — optional; populate via batch-visuals profile.
+      - ./AdVise/ds/outputs:/app/ds_outputs:ro
     ports:
       - 8501:8501
     environment:
       - API_URL=http://back:8000
+      # Where Streamlit reads summary_table.csv and PNG charts (see pages/3_Prediction_Results.py).
+      - ADVISE_DS_OUTPUTS=/app/ds_outputs
     depends_on:
       - back
+
+  # One-shot: batch-score training_dataset + PNG reports for the UI "offline" section (~ minutes on large CSV).
+  # docker compose --profile batch-visuals run --rm ds_batch_visuals
+  ds_batch_visuals:
+    container_name: ds_batch_visuals
+    profiles:
+      - batch-visuals
+    build:
+      context: ./AdVise/ds
+      dockerfile: Dockerfile
+    working_dir: /work/ds
+    volumes:
+      - ./AdVise/ds:/work/ds
+    environment:
+      - POSTGRES_HOST=db
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      etl_db:
+        condition: service_completed_successfully
+    restart: "no"
+    command: ["sh", "-c", "python predict.py && python generate_visuals.py"]
 
   # Jupyter for AdVise/ds (optional). Mount full AdVise/ so paths like ../etl/... in notebooks match host layout.
   ds:

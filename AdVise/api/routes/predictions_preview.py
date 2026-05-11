@@ -163,10 +163,6 @@ def preview_prediction(payload: PredictionPreviewRequest):
         "aspect_ratio": "1:1",
         "visual_complexity": 0.5,
         "has_person": False,
-        "conversion_rate": 0.07,
-        "engagement_score": 5.5,
-        "reach_score": 55.0,
-        "lead_rate": 0.06,
     }
 
     creative_feats = _apply_creative_image_base64(

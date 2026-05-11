@@ -117,6 +117,15 @@ Optional **`audience_age`**, **`audience_gender`**, **`audience_location`**, **`
 }
 ```
 
+**Single outcome per preview:** `campaign_intent` resolves to **exactly one** `target_metric` + `target_label`. The API trains and loads **one** classifier bundle per metric; a preview call scores **only** that metric—not CTR, conversion, and reach at once. Canonical mapping lives in **`AdVise/api/campaign_intent.py`** (`INTENT_TO_TARGET_METRIC`):
+
+| Campaign intent (normalized, lowercase) | `target_metric` |
+|----------------------------------------|-----------------|
+| `awareness` | `reach_score` |
+| `traffic`, `engagement` | `ctr` |
+| `sales`, `leads`, `conversion`, `lead_generation` | `conversion_rate` |
+| unknown / other | defaults to `ctr` |
+
 **Creative features:** pass **`creative_image_base64`** (first image). The API decodes a temp file and runs **`creative_prefect.extract_creative_for_preview`**, which executes the Prefect flow **`api-creative-extraction-preview`** (with retries). Set **`ADVISE_SKIP_PREFECT_CREATIVE=1`** on **`back`** to bypass Prefect. **`creative_extract`** is mounted at `/api/creative_extract.py` in Compose. Without an image, preview uses stub creative fields. Tier scoring uses joblib models under **`AdVise/ds/models`** (`train.py`; legacy **`model.pkl`** only for **`ctr`** unless **`ADVISE_LEGACY_MODEL_ONLY_FOR`** is set). **`outputs/predictions.csv`** is offline-only.
 
 ---
