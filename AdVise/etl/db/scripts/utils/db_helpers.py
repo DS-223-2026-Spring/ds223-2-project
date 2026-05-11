@@ -1,12 +1,12 @@
 import psycopg2
 import os
 from dotenv import load_dotenv
-# -------------------------
-# CONNECTION
-# -------------------------
 
 load_dotenv()
 
+# -------------------------
+# CONNECTION
+# -------------------------
 def get_connection():
     """Same host/db env conventions as `db_utils` (POSTGRES_HOST in Docker, DB_HOST on laptop)."""
     host = os.environ.get("POSTGRES_HOST") or os.environ.get("DB_HOST", "localhost")
@@ -21,14 +21,15 @@ def get_connection():
         password=password,
         port=port,
     )
+
 # -------------------------
 # CREATE (INSERT)
 # -------------------------
 def insert(cur, table, columns, values, returning=None):
-    query = f"""
-        INSERT INTO {table} ({', '.join(columns)})
-        VALUES ({', '.join(['%s'] * len(values))})
-    """
+    cols = ", ".join(columns)
+    placeholders = ", ".join(["%s"] * len(values))
+
+    query = f"INSERT INTO {table} ({cols}) VALUES ({placeholders})"
 
     if returning:
         query += f" RETURNING {returning}"
@@ -39,7 +40,7 @@ def insert(cur, table, columns, values, returning=None):
         return cur.fetchone()[0]
 
 # -------------------------
-# READ (SELECT)
+# READ
 # -------------------------
 def select_all(cur, table):
     cur.execute(f"SELECT * FROM {table}")
@@ -51,11 +52,14 @@ def select_where(cur, table, condition, params):
     return cur.fetchall()
 
 # -------------------------
-# UPDATE
+# UPDATE (cleaner abstraction)
 # -------------------------
-def update(cur, table, set_clause, condition, params):
+def update(cur, table, data: dict, condition, params):
+    set_clause = ", ".join([f"{k} = %s" for k in data.keys()])
+    values = list(data.values())
+
     query = f"UPDATE {table} SET {set_clause} WHERE {condition}"
-    cur.execute(query, params)
+    cur.execute(query, values + params)
 
 # -------------------------
 # DELETE

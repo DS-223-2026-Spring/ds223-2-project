@@ -5,4 +5,12 @@ pytz==2024.2
 six==1.16.0
 SQLAlchemy==2.0.36
 typing_extensions==4.12.2
-psycopg2==2.9.10
+psycopg2-binary==2.9.10
+# DS inference + creative feature extraction in API
+numpy>=1.26
+pandas>=2.1
+scikit-learn>=1.4
+joblib>=1.3
+opencv-python-headless>=4.9.0
+pillow>=10.0
+prefect>=2.14,<4

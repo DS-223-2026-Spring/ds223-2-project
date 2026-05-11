@@ -9,7 +9,7 @@ st.set_page_config(page_title="Prediction Results", layout="wide")
 
 page_header(
     "Prediction Results",
-    "Dashboard for predicted campaign performance and creative comparison."
+    "Prepared page for model result display, creative rankings, tables, filters, and charts."
 )
 
 # ── paths ──────────────────────────────────────────────────────────────────────
@@ -50,7 +50,9 @@ if summary is not None:
 else:
     st.warning("Summary table not found. Run predict.py and generate_visuals.py first.")
 
-st.divider()
+    if creative_features:
+        with st.expander("Extracted creative features (image)", expanded=False):
+            st.json(creative_features)
 
 # ── SECTION 2: Tier distribution charts ───────────────────────────────────────
 st.subheader("Predicted Tier Distributions")
@@ -68,7 +70,8 @@ for col, key, label in [
         else:
             st.info(f"Chart not found: {key}")
 
-st.divider()
+    st.divider()
+    st.subheader("Model Result Display")
 
 # ── SECTION 3: Confidence + Segment ───────────────────────────────────────────
 st.subheader("Confidence & Segments")

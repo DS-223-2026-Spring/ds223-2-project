@@ -1,8 +1,2 @@
-models/*.pkl
+# models/*.pkl are versioned for FastAPICompose mount (tracked; use Git LFS — see /.gitattributes)
 outputs/*.csv
-
-!AdVise/ds/models/model.pkl
-!AdVise/ds/models/encoders.pkl
-!AdVise/ds/models/feature_cols.pkl
-!AdVise/ds/outputs/predictions.csv
-!AdVise/ds/outputs/summary_table.csv

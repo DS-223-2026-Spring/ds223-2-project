@@ -37,7 +37,7 @@ Before getting started, ensure you have the following prerequisites installed:
    cd ds223-2-project
    ```
 
-2. Create a **`.env`** file in the repository root. There is no committed template; copy the block under [Environment variables](#db) into a new file named `.env` and set **`DB_USER`**, **`DB_PASSWORD`**, and a **`DATABASE_URL`** whose database name matches **`DB_NAME`** (default **`marketing_db`**). Do not commit **`.env`**.
+2. Create a **`.env`** file in the repository root. There is no committed template; copy the block under [Environment variables](#db) into a new file named `.env` and set **`DB_USER`**, **`DB_PASSWORD`**, and **`DB_NAME`** (default **`marketing_db`**). For Compose, **`back`** derives **`DATABASE_URL`** from those variables. Do not commit **`.env`**.
 
 3. Build and start the Docker containers from the repository root:
    ```bash
@@ -45,6 +45,8 @@ Before getting started, ensure you have the following prerequisites installed:
    ```
 
    **ETL:** keep the two source CSVs under **`AdVise/etl/db/data_raw/`** (`tech_advertising_campaigns_dataset.csv`, `marketing_campaign_dataset.csv`). The **`etl_db`** service runs once after Postgres is healthy (schema + **`preprocessing.py`** + **`load_to_db.py`** into **`training_dataset`**). The **API** (Compose service **`back`**) starts only after **`etl_db` exits successfully**; if the pipeline fails, **`back`** and **`front`** will not start.
+
+For **`back`**, Docker Compose builds **`DATABASE_URL`** from **`DB_USER`**, **`DB_PASSWORD`**, and **`DB_NAME`** so credentials always match the **`db`** service (`postgresql+psycopg2://…@db:5432/…`). Running the API **outside** Compose still requires **`DATABASE_URL`** yourself; URL-encode special characters in the password (RFC 3986).
 
 ## Access the Application
 
@@ -55,7 +57,8 @@ After running `docker compose up --build`, you can access each component of the 
 - **FastAPI Backend**: [http://localhost:8008](http://localhost:8008)  
   The backend API where requests are processed. You can use tools like [Swagger UI](http://localhost:8008/docs) (provided by FastAPI) to explore the API endpoints and their details.
 
-- **PgAdmin** (optional): [http://localhost:5050](http://localhost:5050)  
+- **PgAdmin** (optional): `http://localhost:${PGADMIN_PORT:-5050}`  
+
   A graphical tool for PostgreSQL, which allows you to view and manage the database. Login using the credentials set in the `.env` file:
   
   - **Email**: Value of `PGADMIN_EMAIL` in your `.env` file
@@ -133,7 +136,7 @@ Before running this setup, ensure Docker and Docker Compose are installed on you
 
 ## DB
 
-- Access pgAdmin for PostgreSQL management: [http://localhost:5050](http://localhost:5050)
+- Access pgAdmin for PostgreSQL management: use `http://localhost:<PGADMIN_PORT>` (default **5050** unless you set **`PGADMIN_PORT`** in `.env`).
     - username: admin@admin.com 
     - password: admin
     - When running for the first time, you must create a server. Configure it as shown in the below image (Password is blurred it should be `password`.)
@@ -141,23 +144,32 @@ Before running this setup, ensure Docker and Docker Compose are installed on you
 
 ### Environment variables
 
-Create a **`.env`** file in the root directory (this file is gitignored). Use variable names and layout like below; substitute your own user, password, and host (`db` inside Compose).
+Create a **`.env`** file in the root directory (this file is gitignored). Use variable names and layout like below; substitute your own user and password.
 
 ```env
-# Used by the API container; path must end with the same DB as DB_NAME (default: marketing_db)
-DATABASE_URL=postgresql+psycopg2://<user>:<password>@db:5432/marketing_db
-
-# PostgreSQL (Compose `db` service)
+# Canonical credentials for the Compose `db` service.
+# The `back` service DATABASE_URL is derived inside docker-compose.yml from DB_* (no drift).
 DB_USER=<your_database_user>
 DB_PASSWORD=<your_database_password>
 DB_NAME=marketing_db
 
-# pgAdmin
+# Optional: explicit URL for running FastAPI on the host only (not required for Compose `back`)
+# DATABASE_URL=postgresql+psycopg2://<user>:<url_encoded_password>@localhost:5432/marketing_db
+
+# pgAdmin (compose host port; default 5050 if unset)
+# PGADMIN_PORT=5050
+
 PGADMIN_EMAIL=admin@admin.com
 PGADMIN_PASSWORD=admin
 ```
 
+Compose sets **`ADVISE_PREFECT_AVAILABLE=true`** on **`back`** so **`GET /v1/status`** reflects that preview creative extraction uses Prefect (see **`AdVise/api/creative_prefect.py`**). Override in **`.env`** only if you need **`false`**.
+
+Optional: **`ADVISE_SKIP_PREFECT_CREATIVE=true`** on **`back`** skips the Prefect wrapper for **`creative_image_base64`** (debug).
+
 Do not commit **`.env`** or real secrets.
+
+Structured **v1** HTTP examples: [`docs/api/v1-endpoints.md`](docs/api/v1-endpoints.md). Refresh **`docs/api/openapi.json`** with **`python3 scripts/export_openapi.py`** after route changes.
 
 
 
@@ -166,6 +178,14 @@ Do not commit **`.env`** or real secrets.
 Schema diagrams and notes also live under **`docs/`** (for example `docs/etl.md` and `docs/imgs/star_schema.png`). The marketing pipeline lives under **`AdVise/etl/db`**, and the Compose service **`etl_db`** is part of the default stack. See **`docs/etl.md`**.
 
 ## API
+
+### Tier models and creative extraction
+
+- **`GET /v1/meta/enums`** pulls dropdown values from **`training_dataset`** so the Streamlit form matches the CSV/ETL vocabulary models were trained on.
+- **`POST /v1/predictions/preview`** loads joblib artifacts from **`AdVise/ds/models`** mounted as **`/api/ds_models`** in Compose. Prefer per-metric files from **`python AdVise/ds/train.py`** (`model_ctr.pkl`, `encoders_ctr.pkl`, …). A legacy trio **`model.pkl` / `encoders.pkl` / `feature_cols.pkl`** is used **only** when the resolved target metric matches **`ADVISE_LEGACY_MODEL_ONLY_FOR`** (default **`ctr`**). Set that env on **`back`** if your single bundle was trained for another target.
+- **Git LFS:** **`AdVise/ds/models/*.pkl`** are tracked with [Git LFS](https://git-lfs.github.com/) (some files exceed GitHub’s plain-file size limit). Install the **git-lfs** CLI, run **`git lfs install`** once per machine, then **`git clone`** / **`git pull`** as usual—LFS downloads real binaries instead of stub pointers when configured. Without Git LFS, pushes of new **`*.pkl`** files may fail.
+- **`creative_image_base64`** on the preview request runs **`AdVise/ds/creative_extract.py`** via a **Prefect** flow (**`creative_prefect.py`** → **`api-creative-extraction-preview`**) inside **`back`** (Compose bind-mount). Set **`ADVISE_SKIP_PREFECT_CREATIVE=1`** to bypass Prefect for debugging. Rebuild **`back`** after changing **`AdVise/api/requirements.txt`** (adds prefect, numpy, pandas, scikit-learn, joblib, OpenCV headless, Pillow).
+- Batch files such as **`AdVise/ds/outputs/predictions.csv`** are not used for live HTTP inference; they come from offline scoring pipelines.
 
 
 ### Features

@@ -32,7 +32,13 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build stack (back and front images)
-        run: docker compose build back front
+        run: |
+          for attempt in 1 2 3; do
+            docker compose build back front && exit 0
+            echo "docker compose build failed (attempt $attempt), retrying in 30s..."
+            sleep 30
+          done
+          exit 1
 
       - name: Build marketing ETL image (etl_db)
         run: docker compose build etl_db
