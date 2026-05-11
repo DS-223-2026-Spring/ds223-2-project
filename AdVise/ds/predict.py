@@ -19,6 +19,7 @@ from modeling_related_files import (
     load_model,
     load_encoders,
     preprocess_for_inference,
+    engineer_features,
     DROP_COLS,
     IMPUTE_MEDIAN_COLS,
     TARGET,
@@ -142,8 +143,12 @@ def save_to_csv(results: pd.DataFrame, output_path: str):
     results.to_csv(output_path, index=False)
     print(f"\nPredictions saved to: {output_path}")
     print(f"Total rows: {len(results):,}")
-    print(f"\nTier distribution:")
-    print(results["predicted_ctr_tier"].value_counts())
+
+    pred_cols = [c for c in results.columns if c.startswith("predicted_")]
+    for col in pred_cols:
+        print(f"\nDistribution for {col}:")
+        print(results[col].value_counts())
+
     print(f"\nSample output:")
     print(results.head(5).to_string(index=False))
 
@@ -212,6 +217,8 @@ if __name__ == "__main__":
 
     # 1. Load data
     df = load_data(args.data_path)
+
+    df = engineer_features(df)
 
     # 2. Decide target per row based on campaign_intent (or use override)
     if args.target:

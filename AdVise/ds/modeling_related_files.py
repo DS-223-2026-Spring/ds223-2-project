@@ -24,6 +24,9 @@ ALL_TARGETS = {
     "reach_score":     "reach_score_tier",
 }
 
+# Targets we train and predict for (single source of truth)
+TRAIN_TARGETS = ["ctr", "conversion_rate", "reach_score"]
+
 # Which target to use based on campaign_intent
 INTENT_TO_TARGET = {
     "awareness": "reach_score",
@@ -47,6 +50,30 @@ FEATURE_COLS = [
     "copy_text_length", "aspect_ratio", "visual_complexity", "has_person",
     "conversion_rate", "engagement_score", "reach_score", "lead_rate",
 ]
+
+def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add derived features — must match what train.py produces."""
+    df = df.copy()
+
+    if "engagement_score" in df.columns and "duration_days" in df.columns:
+        df["engagement_per_day"] = df["engagement_score"] / (df["duration_days"] + 1)
+
+    if "budget" in df.columns and "duration_days" in df.columns:
+        df["budget_per_day"] = df["budget"] / (df["duration_days"] + 1)
+
+    if "copy_text_length" in df.columns:
+        df["copy_length_bucket"] = pd.cut(
+            df["copy_text_length"],
+            bins=[0, 10, 30, 9999],
+            labels=["short", "medium", "long"]
+        ).astype(str)
+
+    # Multi-metric mean — exclude the target being predicted to avoid leakage
+    # Only use lead_rate as it's never a direct target
+    if "lead_rate" in df.columns:
+        df["multi_metric_mean"] = df["lead_rate"]
+
+    return df
 
 # CTR tier labels (output classes)
 CTR_TIERS = ["low", "medium", "high"]
@@ -84,11 +111,10 @@ def preprocess_for_inference(df: pd.DataFrame, encoders: dict, target: str = "ct
             )
             df[col] = le.transform(df[col])
 
-    # Keep only the columns the model was trained on
-    trained_cols = list(encoders.keys()) + [
-        c for c in df.columns if c not in encoders
-    ]
-    df = df[[c for c in df.columns if c in df.columns]]
+    # Keep only the columns the model was trained on, in exact order
+    feature_cols = load_feature_cols(target)
+    available = [c for c in feature_cols if c in df.columns]
+    df = df[available]
 
     return df
 
@@ -116,3 +142,14 @@ def load_feature_cols(target: str = "ctr"):
     if not os.path.exists(path):
         raise FileNotFoundError(f"feature_cols not found at {path}. Run train.py first.")
     return joblib.load(path)
+
+def get_feature_importance(target: str = "ctr") -> pd.DataFrame:
+    """Return a sorted dataframe of feature importances for a trained model."""
+    model = load_model(target)
+    feature_cols = load_feature_cols(target)
+    importances = model.feature_importances_
+    df = pd.DataFrame({
+        "feature": feature_cols,
+        "importance": importances
+    }).sort_values("importance", ascending=False).reset_index(drop=True)
+    return df
