@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional
-
+from datetime import date, datetime
 from pydantic import BaseModel, Field
 
 # ── Legacy HR demo models (older routes); not aligned with marketing schema.sql ──
@@ -167,3 +167,75 @@ class PredictionPreviewResponse(BaseModel):
 
 class PredictionRunResponse(PredictionPreviewResponse):
     pass
+
+class CampaignDBResponse(BaseModel):
+    campaign_id: int
+    company: Optional[str] = None
+    campaign_type: Optional[str] = None
+    platform: Optional[str] = None
+    budget: Optional[float] = None
+    duration_days: Optional[int] = None
+    start_date: Optional[date] = None
+    campaign_intent: Optional[str] = None
+    product_type: Optional[str] = None
+
+
+class CampaignListResponse(BaseModel):
+    count: int
+    campaigns: List[CampaignDBResponse]
+
+
+class AdDBResponse(BaseModel):
+    ad_id: int
+    campaign_id: Optional[int] = None
+    creative_type: Optional[str] = None
+    cta_type: Optional[str] = None
+    copy_text_length: Optional[int] = None
+    aspect_ratio: Optional[str] = None
+    visual_complexity: Optional[float] = None
+    has_person: Optional[bool] = None
+    creative_url: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class AdListResponse(BaseModel):
+    count: int
+    ads: List[AdDBResponse]
+
+
+class AudienceDBResponse(BaseModel):
+    audience_id: int
+    campaign_id: Optional[int] = None
+    age: Optional[str] = None
+    gender: Optional[str] = None
+    location: Optional[str] = None
+    interests: Optional[str] = None
+    audience_temperature: Optional[str] = None
+    customer_type: Optional[str] = None
+    career: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class AudienceListResponse(BaseModel):
+    count: int
+    audience: List[AudienceDBResponse]
+
+
+class PredictionDBResponse(BaseModel):
+    prediction_id: int
+    campaign_id: Optional[int] = None
+    ad_id: Optional[int] = None
+    predicted_ctr: Optional[float] = None
+    predicted_conversion_rate: Optional[float] = None
+    predicted_engagement_score: Optional[float] = None
+    predicted_reach_score: Optional[float] = None
+    predicted_lead_rate: Optional[float] = None
+    predicted_metric: Optional[str] = None
+    predicted_value: Optional[float] = None
+    model_version: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class PredictionListResponse(BaseModel):
+    count: int
+    predictions: List[PredictionDBResponse]

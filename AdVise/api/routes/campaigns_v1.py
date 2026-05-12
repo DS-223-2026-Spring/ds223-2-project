@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from schema import CampaignListResponse, CampaignDBResponse
 
 from database import get_db
 
 router = APIRouter(prefix="/v1/campaigns", tags=["campaigns"])
 
 
-@router.get("/")
+@router.get("/", response_model=CampaignListResponse)
 def get_campaigns(db: Session = Depends(get_db)):
     """
     Return campaign records from the PostgreSQL campaigns table.
@@ -29,7 +30,7 @@ def get_campaigns(db: Session = Depends(get_db)):
 
     rows = db.execute(query).mappings().all()
 
-    return {
-        "count": len(rows),
-        "campaigns": [dict(row) for row in rows]
-    }
+    return CampaignListResponse(
+        count=len(rows),
+        campaigns=[CampaignDBResponse(**dict(row)) for row in rows]
+    )
