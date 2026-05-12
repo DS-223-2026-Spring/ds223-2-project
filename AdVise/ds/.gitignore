@@ -1,2 +1,0 @@
-# models/*.pkl are versioned for FastAPICompose mount (tracked; use Git LFS — see /.gitattributes)
-outputs/*.csv

@@ -1,3 +1,0 @@
-# Joblib tier classifiers exceed GitHub's 100 MB limit for normal blobs.
-# After clone, run: git lfs install && git lfs pull
-AdVise/ds/models/*.pkl filter=lfs merge=lfs -text
