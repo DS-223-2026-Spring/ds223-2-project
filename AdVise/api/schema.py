@@ -239,3 +239,23 @@ class PredictionDBResponse(BaseModel):
 class PredictionListResponse(BaseModel):
     count: int
     predictions: List[PredictionDBResponse]
+    
+class CampaignCreateRequest(BaseModel):
+    company: str
+    campaign_type: Optional[str] = "manual"
+    platform: str
+    budget: float
+    duration_days: int
+    campaign_intent: str
+    product_type: str
+
+
+class CampaignCreateResponse(BaseModel):
+    campaign_id: int
+    company: str
+    campaign_type: Optional[str] = None
+    platform: str
+    budget: float
+    duration_days: int
+    campaign_intent: str
+    product_type: str

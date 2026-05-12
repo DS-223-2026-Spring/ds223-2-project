@@ -1,8 +1,7 @@
 import base64
-
 import streamlit as st
 from ui_components import page_header, placeholder_box
-from api_client import get_status, get_enums, submit_preview_prediction
+from api_client import get_status, get_enums, submit_preview_prediction, create_campaign
 
 st.set_page_config(page_title="Campaign Input", layout="wide")
 
@@ -200,6 +199,17 @@ if analyze_clicked:
             "duration_days": int(duration),
             "creative_count": min(3, len(uploaded_files)) if uploaded_files else 1,
         }
+
+        campaign_save_payload = {
+            "company": campaign_name,
+            "campaign_type": campaign_intent,
+            "platform": platform,
+            "budget": float(budget),
+            "duration_days": int(duration),
+            "campaign_intent": campaign_intent,
+            "product_type": product_type,
+        }
+
         first = uploaded_files[0]
         if first.type and first.type.startswith("image/"):
             payload["creative_image_base64"] = base64.standard_b64encode(
@@ -207,11 +217,22 @@ if analyze_clicked:
             ).decode("ascii")
 
         with st.status("Processing campaign prediction...", expanded=True):
+            st.write("Saving campaign configuration to PostgreSQL.")
+
+            saved_campaign = create_campaign(campaign_save_payload)
+
+            if "error" in saved_campaign:
+                st.warning(f"Campaign was not saved to DB: {saved_campaign['error']}")
+            else:
+                st.success(f"Campaign saved to DB with ID {saved_campaign['campaign_id']}.")
+
             st.write("Validating campaign payload for /v1/predictions/preview (JSON).")
+
             if "creative_image_base64" in payload:
                 st.write("Sending first image as base64 → API runs creative feature extraction.")
             else:
                 st.write("Video / non-image creative: skipping pixel extraction.")
+
             st.write("Waiting for backend prediction response.")
 
             result, response_code = submit_preview_prediction(payload)
