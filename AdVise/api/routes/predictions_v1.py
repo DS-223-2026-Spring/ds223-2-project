@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-
+from schema import PredictionDBResponse, PredictionListResponse
 from database import get_db
 
 router = APIRouter(prefix="/v1/predictions", tags=["predictions"])
 
 
-@router.get("/")
+@router.get("/", response_model=PredictionListResponse)
 def get_predictions(db: Session = Depends(get_db)):
     """
     Return prediction records from the PostgreSQL predictions table.
@@ -20,7 +20,7 @@ def get_predictions(db: Session = Depends(get_db)):
 
     rows = db.execute(query).mappings().all()
 
-    return {
-        "count": len(rows),
-        "predictions": [dict(row) for row in rows]
-    }
+    return PredictionListResponse(
+        count=len(rows),
+        predictions=[PredictionDBResponse(**dict(row)) for row in rows]
+    )
