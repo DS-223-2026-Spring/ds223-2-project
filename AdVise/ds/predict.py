@@ -35,16 +35,27 @@ os.makedirs(OUTPUTS_DIR, exist_ok=True)
 # ──────────────────────────────────────────────────────────────────────────────
 # 1. DATA LOADING
 # ──────────────────────────────────────────────────────────────────────────────
-def load_data(csv_path: str) -> pd.DataFrame:
-    """Load data from DB; fall back to CSV if DB is unavailable."""
-    try:
-        sys.path.append(os.path.abspath("../etl/db/scripts/utils"))
-        from db_helpers import get_connection
+import importlib.util
 
-        conn = get_connection()
+def _load_db_helpers():
+    utils_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "../etl/db/scripts/utils")
+    )
+    spec = importlib.util.spec_from_file_location(
+        "db_helpers", os.path.join(utils_path, "db_helpers.py")
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+def load_data(csv_path: str) -> pd.DataFrame:
+    try:
+        db = _load_db_helpers()
+        conn = db.get_connection()
         query = """
             SELECT
                 c.campaign_id,
+                cr.ad_id,
                 c.platform,
                 c.budget,
                 c.duration_days,
@@ -63,21 +74,17 @@ def load_data(csv_path: str) -> pd.DataFrame:
                 cr.aspect_ratio,
                 cr.visual_complexity,
                 cr.has_person,
-                p.predicted_ctr AS ctr,
-                p.predicted_conversion_rate AS conversion_rate,
-                p.predicted_engagement_score AS engagement_score,
-                p.predicted_reach_score AS reach_score,
-                p.predicted_lead_rate AS lead_rate
+                p.predicted_lead_rate AS lead_rate,
+                p.predicted_engagement_score AS engagement_score
             FROM campaigns c
-            JOIN audience a    ON a.campaign_id = c.campaign_id
-            JOIN ads cr        ON cr.campaign_id = c.campaign_id
-            JOIN predictions p ON p.campaign_id  = c.campaign_id
+            JOIN audience a ON a.campaign_id = c.campaign_id
+            JOIN ads cr ON cr.campaign_id = c.campaign_id
+            LEFT JOIN predictions p ON p.campaign_id = c.campaign_id
         """
         df = pd.read_sql(query, conn)
         conn.close()
         print(f"Loaded {len(df):,} rows from DB.")
         return df
-
     except Exception as e:
         print(f"DB unavailable ({e}), loading from CSV: {csv_path}")
         df = pd.read_csv(csv_path)
@@ -97,6 +104,7 @@ def run_predictions(df: pd.DataFrame, model, encoders: dict, target: str = "ctr"
     """
     # Keep campaign_id if it exists (from DB), for writing back
     id_col = df["campaign_id"] if "campaign_id" in df.columns else None
+    ad_id_col = df["ad_id"] if "ad_id" in df.columns else None
 
     # Keep actual CTR if available (for reference)
     actual_ctr = df[target] if target in df.columns else None
@@ -116,6 +124,8 @@ def run_predictions(df: pd.DataFrame, model, encoders: dict, target: str = "ctr"
         f"predicted_{target}_tier": predicted_tier,
         "confidence_score": confidence,
     })
+    if ad_id_col is not None:
+        results.insert(0, "ad_id", ad_id_col.values)
 
     # Add actual CTR for reference if available
     if actual_ctr is not None:
@@ -157,39 +167,38 @@ def save_to_csv(results: pd.DataFrame, output_path: str):
 # 4. WRITE BACK TO DB
 # ──────────────────────────────────────────────────────────────────────────────
 def write_to_db(results: pd.DataFrame):
-    """Write prediction results back to the predictions table in the DB."""
     try:
-        sys.path.append(os.path.abspath("../etl/db/scripts/utils"))
-        from db_helpers import get_connection
-
-        conn = get_connection()
-        cur  = conn.cursor()
-
-        updated = 0
+        db = _load_db_helpers()
+        conn = db.get_connection()
+        cur = conn.cursor()
+        inserted = 0
         for _, row in results.iterrows():
             if "campaign_id" not in row:
                 continue
+            target = row.get("target", "ctr")
+            tier_col = f"predicted_{target}_tier"
             cur.execute("""
-                UPDATE predictions
-                SET predicted_ctr_tier  = %s,
-                    confidence_score    = %s,
-                    performance_segment = %s
-                WHERE campaign_id = %s
+                INSERT INTO predictions
+                    (campaign_id, ad_id, predicted_tier, predicted_metric, confidence_score)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (campaign_id, predicted_metric)
+                DO UPDATE SET
+                    predicted_tier = EXCLUDED.predicted_tier,
+                    confidence_score = EXCLUDED.confidence_score
             """, (
-                row["predicted_ctr_tier"],
-                float(row["confidence_score"]),
-                row["performance_segment"],
                 int(row["campaign_id"]),
+                int(row["ad_id"]) if pd.notna(row.get("ad_id")) else None,
+                row.get(tier_col),
+                target,
+                float(row["confidence_score"]),
             ))
-            updated += 1
-
+            inserted += 1
         conn.commit()
         cur.close()
         conn.close()
-        print(f"Written {updated:,} rows back to DB predictions table.")
-
+        print(f"Inserted/updated {inserted:,} rows in predictions table.")
     except Exception as e:
-        print(f"DB write skipped ({e}). Results are saved in CSV only.")
+        print(f"DB write skipped ({e}). Results saved in CSV only.")
 
 
 # ──────────────────────────────────────────────────────────────────────────────

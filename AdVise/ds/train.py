@@ -34,24 +34,53 @@ IMPUTE_MEDIAN = ["engagement_score"]
 # ──────────────────────────────────────────────────────────────────────────────
 # 1. DATA LOADING
 # ──────────────────────────────────────────────────────────────────────────────
+import importlib.util
+
+def _load_db_helpers():
+    utils_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "../etl/db/scripts/utils")
+    )
+    spec = importlib.util.spec_from_file_location(
+        "db_helpers", os.path.join(utils_path, "db_helpers.py")
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
 def load_data(csv_path: str) -> pd.DataFrame:
     try:
-        sys.path.append(os.path.abspath("../etl/db/scripts/utils"))
-        from db_helpers import get_connection
-        conn  = get_connection()
+        db = _load_db_helpers()
+        conn = db.get_connection()
         query = """
-            SELECT c.platform, c.budget, c.duration_days, c.campaign_intent,
-                   c.product_type, c.cta_type,
-                   a.age, a.gender, a.location, a.interests,
-                   a.audience_temperature, a.customer_type, a.career,
-                   cr.creative_type, cr.copy_text_length, cr.aspect_ratio,
-                   cr.visual_complexity, cr.has_person,
-                   p.ctr, p.conversion_rate, p.engagement_score,
-                   p.reach_score, p.lead_rate
+            SELECT
+                c.campaign_id,
+                c.platform,
+                c.budget,
+                c.duration_days,
+                c.campaign_intent,
+                c.product_type,
+                c.cta_type,
+                a.age,
+                a.gender,
+                a.location,
+                a.interests,
+                a.audience_temperature,
+                a.customer_type,
+                a.career,
+                cr.creative_type,
+                cr.copy_text_length,
+                cr.aspect_ratio,
+                cr.visual_complexity,
+                cr.has_person,
+                p.ctr,
+                p.conversion_rate,
+                p.engagement_score,
+                p.reach_score,
+                p.lead_rate
             FROM campaigns c
-            JOIN audience a    ON a.campaign_id = c.id
-            JOIN ads cr        ON cr.campaign_id = c.id
-            JOIN predictions p ON p.campaign_id  = c.id
+            JOIN audience a ON a.campaign_id = c.campaign_id
+            JOIN ads cr ON cr.campaign_id = c.campaign_id
+            JOIN predictions p ON p.campaign_id = c.campaign_id
         """
         df = pd.read_sql(query, conn)
         conn.close()

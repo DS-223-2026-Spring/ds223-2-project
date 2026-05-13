@@ -44,11 +44,11 @@ IMPUTE_MEDIAN_COLS = ["engagement_score"]
 
 # Final 21 features used by the trained model (in order)
 FEATURE_COLS = [
-    "platform", "duration_days", "campaign_intent", "product_type",
-    "cta_type", "age", "gender", "location", "interests",
-    "audience_temperature", "customer_type", "career", "creative_type",
-    "copy_text_length", "aspect_ratio", "visual_complexity", "has_person",
-    "conversion_rate", "engagement_score", "reach_score", "lead_rate",
+    "platform", "duration_days", "campaign_intent", "product_type", "cta_type",
+    "age", "gender", "location", "interests", "audience_temperature",
+    "customer_type", "career", "creative_type", "copy_text_length",
+    "aspect_ratio", "visual_complexity", "has_person",
+    "engagement_per_day", "budget_per_day", "copy_length_bucket", "multi_metric_mean",
 ]
 
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
