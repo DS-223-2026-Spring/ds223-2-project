@@ -37,7 +37,8 @@ Set environment variable **`ADVISE_PREFECT_AVAILABLE=true`** on the API service 
 
 **Response `200`** — matches `MetaEnumsResponse`. Values are **`DISTINCT` queries** on
 `training_dataset` (platform, campaign_intent, product_type, cta_type, audience_temperature,
-customer_type, location → `regions`, age → `age_bands`) so dropdowns match model training
+customer_type, location → `regions`, age → `age_bands`, gender → `genders`, interests → `interests`,
+career → `careers`) so dropdowns match model training
 vocabulary. If a column is empty, the API falls back to static pools aligned with
 `AdVise/etl/db/scripts/preprocessing.py`. **`devices`** has no DB column and stays a small static list.
 
@@ -53,7 +54,10 @@ Example shape (your rows will differ):
   "customer_types": ["new", "returning"],
   "product_types": ["beauty", "electronics", "fashion", "food", "software"],
   "regions": ["Armenia", "Canada", "France", "Germany", "India", "UK", "US"],
-  "age_bands": ["18-24", "25-34", "35-44", "45-54", "55+"]
+  "age_bands": ["18-24", "25-34", "35-44", "45-54", "55+"],
+  "genders": ["male", "female"],
+  "interests": ["beauty", "fashion", "finance", "food", "tech"],
+  "careers": ["engineer", "manager", "professional", "student", "teacher"]
 }
 ```
 
@@ -76,14 +80,25 @@ Frontend must use key **`audience_temperature`** (not `audience_temperatures`).
   "budget": 5000,
   "duration_days": 14,
   "creative_count": 2,
-  "creative_image_base64": "<optional standard base64 of first image; API runs creative_extract>"
+  "audience_age": "25-34",
+  "audience_gender": "female",
+  "audience_location": "US",
+  "audience_interests": "tech",
+  "career": "professional",
+  "campaign_id": 12,
+  "ad_id": 34,
+  "creative_image_base64": "<optional standard base64 of first image; API runs creative_extract>",
+  "creative_asset_url": "https://cdn.example.com/creative.jpg"
 }
 ```
 
 `creative_count` is optional (default `1`); capped in logic for alternate recommendation rows.
-Optional **`audience_age`**, **`audience_gender`**, **`audience_location`**, **`audience_interests`**, **`career`** override inference defaults.
+Optional **`audience_age`**, **`audience_gender`**, **`audience_location`**, **`audience_interests`**, **`career`** override inference defaults when sent (Streamlit Campaign Input sends them from **/v1/meta/enums**).
+Optional **`creative_asset_url`** sets **`ads.creative_url`** when persisting; omit or leave blank to keep the URL already stored for that ad.
 
-**Response `200`** — `PredictionPreviewResponse` (shape illustrative; IDs and tiers vary):
+Send **`campaign_id`** and **`ad_id`** together (e.g. from **`POST /v1/campaigns/`** after save) to **update** the matching **`ads`** row with creative fields from extraction (and optional URL above), then **upsert** PostgreSQL **`predictions`** on **`(campaign_id, predicted_metric)`** (one row per campaign per target metric; repeat previews update tier, confidence, and **`ad_id`**). Omit both to skip DB persistence (preview-only). Sending only one of the two returns **422**.
+
+**Response `200`** — `PredictionPreviewResponse` includes optional **`prediction_id`** when a row was written to **`predictions`**.
 
 ```json
 {
@@ -95,6 +110,7 @@ Optional **`audience_age`**, **`audience_gender`**, **`audience_location`**, **`
   "target_label": "Predicted reach tier (awareness)",
   "predicted_tier": "medium",
   "prediction_confidence": 0.55,
+  "prediction_id": 901,
   "recommendations": [
     {
       "rank": 1,
@@ -155,7 +171,7 @@ When missing:
 
 ---
 
-## Read-only `/v1/*` listings (PostgreSQL)
+## PostgreSQL-backed `/v1/*` listings and campaign create
 
 These return JSON objects built from SQL; response shapes follow live columns in `schema.sql`. Example campaign list excerpt:
 
@@ -167,17 +183,21 @@ These return JSON objects built from SQL; response shapes follow live columns in
   "campaigns": [
     {
       "campaign_id": 1,
-      "company": "...",
-      "campaign_type": null,
-      "platform": "Instagram",
+      "campaign_name": "Spring push",
+      "campaign_intent": "awareness",
+      "platform": "instagram",
       "budget": 500.0,
       "duration_days": 7,
-      "start_date": null,
-      "campaign_intent": "awareness",
-      "product_type": "software"
+      "product_type": "software",
+      "cta_type": "learn_more",
+      "created_at": "2026-01-15T12:00:00"
     }
   ]
 }
 ```
+
+### `POST /v1/campaigns/`
+
+Body (`CampaignCreateRequest`): campaign fields — `campaign_name`, `campaign_intent` (goal: sales / awareness / traffic / leads / engagement), `platform`, `budget`, `duration_days`, `product_type`, `cta_type` — plus audience fields aligned with the `audience` table / preview API: `audience_age`, `audience_gender`, `audience_location`, `audience_interests`, `audience_temperature`, `customer_type`, `career`. Inserts **one** `campaigns` row and **one** `audience` row in a **single transaction** (rollback if either fails). Response includes `campaign_id`, `audience_id`, and the campaign columns returned from `RETURNING`.
 
 Analogous prefixes: **`/v1/ads/`**, **`/v1/audience/`**, **`/v1/predictions/`** (see OpenAPI tags).

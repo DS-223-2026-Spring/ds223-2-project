@@ -1,4 +1,6 @@
 import random
+from collections import defaultdict
+
 from utils.db_helpers import insert, get_connection
 
 # -------------------------
@@ -12,17 +14,13 @@ def insert_campaigns(cur, n=20):
             cur,
             "campaigns",
             [
-                "company",
-                "campaign_type",
+                "campaign_name",
+                "campaign_intent",
                 "platform",
                 "budget",
                 "duration_days",
-                "start_date",
-                "campaign_intent",
                 "product_type",
                 "cta_type",
-                "discount_offered",
-                "season_month"
             ],
             [
                 f"Company_{i}",
@@ -30,12 +28,20 @@ def insert_campaigns(cur, n=20):
                 random.choice(["facebook", "instagram", "google", "tiktok"]),
                 round(random.uniform(500, 5000), 2),
                 random.randint(7, 60),
-                "2025-01-01",
-                random.choice(["intent_a", "intent_b", "intent_c"]),
-                random.choice(["electronics", "fashion", "food", "home"]),
-                random.choice(["buy_now", "learn_more", "sign_up"]),
-                random.choice(["10%", "20%", "none"]),
-                random.choice(["Jan", "Feb", "Mar", "Apr"])
+                random.choice(
+                    [
+                        "beauty",
+                        "education",
+                        "electronics",
+                        "fashion",
+                        "finance",
+                        "fitness",
+                        "food",
+                        "home",
+                        "software",
+                    ]
+                ),
+                random.choice(["buy_now", "learn_more", "sign_up", "go_to_page"]),
             ],
             returning="campaign_id"
         )
@@ -49,7 +55,8 @@ def insert_campaigns(cur, n=20):
 # ADS
 # -------------------------
 def insert_ads(cur, campaign_ids):
-    ad_ids = []
+    """Return (campaign_id, ad_id) pairs so predictions can reference a valid ad per campaign."""
+    pairs = []
 
     for cid in campaign_ids:
         for _ in range(random.randint(1, 3)):
@@ -70,7 +77,7 @@ def insert_ads(cur, campaign_ids):
                 [
                     cid,
                     random.choice(["image", "video", "carousel", "story"]),
-                    random.choice(["buy_now", "learn_more", "sign_up"]),
+                    random.choice(["buy_now", "learn_more", "sign_up", "go_to_page"]),
                     random.randint(5, 50),
                     random.choice(["1:1", "4:5", "16:9", "9:16"]),
                     round(random.uniform(0.1, 0.9), 3),
@@ -80,9 +87,9 @@ def insert_ads(cur, campaign_ids):
                 returning="ad_id"
             )
 
-            ad_ids.append(aid)
+            pairs.append((cid, aid))
 
-    return ad_ids
+    return pairs
 
 
 # -------------------------
@@ -119,32 +126,35 @@ def insert_audience(cur, campaign_ids):
 # -------------------------
 # PREDICTIONS
 # -------------------------
-def insert_predictions(cur, campaign_ids, ad_ids):
-    for cid, aid in zip(campaign_ids, ad_ids):
-        insert(
-            cur,
-            "predictions",
-            [
-                "campaign_id",
-                "ad_id",
-                "predicted_ctr",
-                "predicted_conversion_rate",
-                "predicted_engagement_score",
-                "predicted_reach_score",
-                "predicted_lead_rate",
-                "predicted_metric"
-            ],
-            [
-                cid,
-                aid,
-                round(random.uniform(0.01, 0.25), 4),
-                round(random.uniform(0.001, 0.1), 4),
-                round(random.uniform(10, 90), 2),
-                round(random.uniform(10, 100), 2),
-                round(random.uniform(0.0, 0.5), 4),
-                random.choice(["CTR", "CONVERSION", "ENGAGEMENT", "REACH"])
-            ]
-        )
+# Matches ``uq_campaign_metric``: one row per (campaign_id, predicted_metric).
+_METRICS = ("ctr", "conversion_rate", "reach_score")
+
+
+def insert_predictions(cur, campaign_ad_pairs):
+    by_campaign = defaultdict(list)
+    for cid, aid in campaign_ad_pairs:
+        by_campaign[cid].append(aid)
+
+    for cid, aids in by_campaign.items():
+        for metric in _METRICS:
+            insert(
+                cur,
+                "predictions",
+                [
+                    "campaign_id",
+                    "ad_id",
+                    "predicted_metric",
+                    "predicted_tier",
+                    "confidence",
+                ],
+                [
+                    cid,
+                    random.choice(aids),
+                    metric,
+                    random.choice(["low", "medium", "high"]),
+                    round(random.uniform(0.35, 0.95), 4),
+                ],
+            )
 
 
 # -------------------------
@@ -158,10 +168,10 @@ def main():
         print("[START] inserting synthetic app data...")
 
         campaign_ids = insert_campaigns(cur)
-        ad_ids = insert_ads(cur, campaign_ids)
+        campaign_ad_pairs = insert_ads(cur, campaign_ids)
 
         insert_audience(cur, campaign_ids)
-        insert_predictions(cur, campaign_ids, ad_ids)
+        insert_predictions(cur, campaign_ad_pairs)
 
         conn.commit()
         print("[DONE] synthetic data inserted successfully")

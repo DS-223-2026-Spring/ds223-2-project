@@ -40,18 +40,8 @@ def load_data(csv_path: str) -> pd.DataFrame:
         from db_helpers import get_connection
         conn  = get_connection()
         query = """
-            SELECT c.platform, c.budget, c.duration_days, c.campaign_intent,
-                   c.product_type, c.cta_type,
-                   a.age, a.gender, a.location, a.interests,
-                   a.audience_temperature, a.customer_type, a.career,
-                   cr.creative_type, cr.copy_text_length, cr.aspect_ratio,
-                   cr.visual_complexity, cr.has_person,
-                   p.ctr, p.conversion_rate, p.engagement_score,
-                   p.reach_score, p.lead_rate
-            FROM campaigns c
-            JOIN audience a    ON a.campaign_id = c.id
-            JOIN ads cr        ON cr.campaign_id = c.id
-            JOIN predictions p ON p.campaign_id  = c.id
+            SELECT *
+            FROM training_dataset
         """
         df = pd.read_sql(query, conn)
         conn.close()

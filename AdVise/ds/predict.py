@@ -43,35 +43,8 @@ def load_data(csv_path: str) -> pd.DataFrame:
 
         conn = get_connection()
         query = """
-            SELECT
-                c.id AS campaign_id,
-                c.platform,
-                c.budget,
-                c.duration_days,
-                c.campaign_intent,
-                c.product_type,
-                c.cta_type,
-                a.age,
-                a.gender,
-                a.location,
-                a.interests,
-                a.audience_temperature,
-                a.customer_type,
-                a.career,
-                cr.creative_type,
-                cr.copy_text_length,
-                cr.aspect_ratio,
-                cr.visual_complexity,
-                cr.has_person,
-                p.ctr,
-                p.conversion_rate,
-                p.engagement_score,
-                p.reach_score,
-                p.lead_rate
-            FROM campaigns c
-            JOIN audience a    ON a.campaign_id = c.id
-            JOIN ads cr        ON cr.campaign_id = c.id
-            JOIN predictions p ON p.campaign_id  = c.id
+            SELECT *
+            FROM training_dataset
         """
         df = pd.read_sql(query, conn)
         conn.close()
@@ -163,25 +136,44 @@ def write_to_db(results: pd.DataFrame):
         from db_helpers import get_connection
 
         conn = get_connection()
-        cur  = conn.cursor()
+        cur = conn.cursor()
+
+        tier_col = next(
+            (c for c in results.columns if c.startswith("predicted_") and c.endswith("_tier")),
+            None,
+        )
+        if tier_col is None:
+            print("DB write skipped (no predicted_*_tier column in results).")
+            return
 
         updated = 0
         for _, row in results.iterrows():
-            if "campaign_id" not in row:
+            if "campaign_id" not in row or pd.isna(row["campaign_id"]):
                 continue
-            cur.execute("""
+            metric = row.get("target", "ctr")
+            if hasattr(metric, "item"):
+                metric = metric.item()
+            metric = str(metric)
+            tier_val = row[tier_col]
+            if hasattr(tier_val, "item"):
+                tier_val = tier_val.item()
+            tier_str = str(tier_val)
+            cur.execute(
+                """
                 UPDATE predictions
-                SET predicted_ctr_tier  = %s,
-                    confidence_score    = %s,
-                    performance_segment = %s
+                SET predicted_tier = %s,
+                    confidence = %s
                 WHERE campaign_id = %s
-            """, (
-                row["predicted_ctr_tier"],
-                float(row["confidence_score"]),
-                row["performance_segment"],
-                int(row["campaign_id"]),
-            ))
-            updated += 1
+                  AND predicted_metric = %s
+                """,
+                (
+                    tier_str,
+                    float(row["confidence_score"]),
+                    int(row["campaign_id"]),
+                    metric,
+                ),
+            )
+            updated += cur.rowcount
 
         conn.commit()
         cur.close()

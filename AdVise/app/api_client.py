@@ -31,19 +31,42 @@ def get_enums():
         "devices": ["mobile", "desktop", "tablet"],
         "customer_types": ["new", "returning"],
         "product_types": [
+            "beauty",
+            "education",
             "electronics",
             "fashion",
-            "food",
-            "beauty",
-            "fitness",
             "finance",
-            "travel",
-            "education",
+            "fitness",
+            "food",
             "home",
             "software",
         ],
         "regions": ["US", "UK", "India", "Canada", "Germany", "France", "Armenia"],
         "age_bands": ["18-24", "25-34", "35-44", "45-54", "55+"],
+        "genders": ["male", "female"],
+        "interests": [
+            "tech",
+            "fashion",
+            "food",
+            "sports",
+            "travel",
+            "music",
+            "fitness",
+            "finance",
+            "gaming",
+            "beauty",
+        ],
+        "careers": [
+            "student",
+            "professional",
+            "entrepreneur",
+            "freelancer",
+            "manager",
+            "engineer",
+            "teacher",
+            "healthcare",
+            "other",
+        ],
     }
 
 
@@ -51,6 +74,9 @@ def submit_preview_prediction(payload: dict):
     """
     POST /v1/predictions/preview with a JSON body (PredictionPreviewRequest).
     Include optional ``creative_image_base64`` (first creative) so the API runs image extraction.
+    With ``campaign_id`` and ``ad_id``, the API updates ``ads`` and inserts ``predictions``;
+    optional ``creative_asset_url`` maps to ``ads.creative_url`` (omit to leave the stored URL unchanged).
+    Upsert: one ``predictions`` row per ``(campaign_id, predicted_metric)``; repeat previews update it.
     """
     try:
         response = requests.post(
@@ -64,7 +90,7 @@ def submit_preview_prediction(payload: dict):
 
 def create_campaign(payload: dict) -> dict:
     """
-    POST /v1/campaigns/ to persist campaign data in PostgreSQL.
+    POST /v1/campaigns/ to persist campaign + audience in PostgreSQL.
     """
     try:
         response = requests.post(
@@ -74,5 +100,16 @@ def create_campaign(payload: dict) -> dict:
         )
         response.raise_for_status()
         return response.json()
+    except requests.HTTPError as exc:
+        detail: str | dict
+        try:
+            body = exc.response.json() if exc.response is not None else {}
+            if isinstance(body, dict) and "detail" in body:
+                detail = body["detail"]
+            else:
+                detail = body if body else (exc.response.text if exc.response else str(exc))
+        except Exception:
+            detail = exc.response.text if exc.response else str(exc)
+        return {"error": detail, "status_code": getattr(exc.response, "status_code", None)}
     except requests.RequestException as exc:
         return {"error": str(exc)}

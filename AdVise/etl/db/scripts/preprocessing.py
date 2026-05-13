@@ -19,8 +19,17 @@ AUD_TEMPS = ["cold", "warm", "hot"]
 CUST_TYPES = ["new", "returning"]
 CTA_TYPES = ["buy_now", "learn_more", "sign_up", "go_to_page"]
 
-PRODUCT_TYPES = ["electronics", "fashion", "food", "beauty", "fitness",
-                 "finance", "travel", "education", "home", "software"]
+PRODUCT_TYPES = [
+    "beauty",
+    "education",
+    "electronics",
+    "fashion",
+    "finance",
+    "fitness",
+    "food",
+    "home",
+    "software",
+]
 
 CAREERS = ["student", "professional", "entrepreneur", "freelancer",
            "manager", "engineer", "teacher", "healthcare", "other"]

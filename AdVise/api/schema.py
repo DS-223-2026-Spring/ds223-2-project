@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional
-from datetime import date, datetime
+from datetime import datetime
 from pydantic import BaseModel, Field
 
 # ── Legacy HR demo models (older routes); not aligned with marketing schema.sql ──
@@ -112,6 +112,9 @@ class MetaEnumsResponse(BaseModel):
     product_types: List[str]
     regions: List[str]
     age_bands: List[str]
+    genders: List[str]
+    interests: List[str]
+    careers: List[str]
 
 
 class StatusResponse(BaseModel):
@@ -141,6 +144,12 @@ class PredictionPreviewRequest(BaseModel):
     career: Optional[str] = Field(default=None)
     # First creative as standard base64 (no data: URL prefix). Runs DS image extraction in API when set.
     creative_image_base64: Optional[str] = None
+    # Optional public URL for the creative; persisted on ``ads.creative_url`` when saving preview.
+    creative_asset_url: Optional[str] = Field(default=None, description="Hosted creative URL for ads.creative_url")
+    # When both set (e.g. after POST /v1/campaigns/), preview outcome is upserted to ``predictions``
+    # (unique per campaign_id + predicted_metric).
+    campaign_id: Optional[int] = Field(default=None, ge=1)
+    ad_id: Optional[int] = Field(default=None, ge=1)
 
 
 class RecommendationBlock(BaseModel):
@@ -163,6 +172,10 @@ class PredictionPreviewResponse(BaseModel):
     input_summary: Dict[str, Any]
     creative_features: Optional[Dict[str, Any]] = None
     model_feature_snapshot: Optional[Dict[str, Any]] = None
+    prediction_id: Optional[int] = Field(
+        default=None,
+        description="Row id after preview upserts PostgreSQL predictions (one row per campaign + metric).",
+    )
 
 
 class PredictionRunResponse(PredictionPreviewResponse):
@@ -170,14 +183,14 @@ class PredictionRunResponse(PredictionPreviewResponse):
 
 class CampaignDBResponse(BaseModel):
     campaign_id: int
-    company: Optional[str] = None
-    campaign_type: Optional[str] = None
+    campaign_name: Optional[str] = None
+    campaign_intent: Optional[str] = None
     platform: Optional[str] = None
     budget: Optional[float] = None
     duration_days: Optional[int] = None
-    start_date: Optional[date] = None
-    campaign_intent: Optional[str] = None
     product_type: Optional[str] = None
+    cta_type: Optional[str] = None
+    created_at: Optional[datetime] = None
 
 
 class CampaignListResponse(BaseModel):
@@ -225,14 +238,9 @@ class PredictionDBResponse(BaseModel):
     prediction_id: int
     campaign_id: Optional[int] = None
     ad_id: Optional[int] = None
-    predicted_ctr: Optional[float] = None
-    predicted_conversion_rate: Optional[float] = None
-    predicted_engagement_score: Optional[float] = None
-    predicted_reach_score: Optional[float] = None
-    predicted_lead_rate: Optional[float] = None
     predicted_metric: Optional[str] = None
-    predicted_value: Optional[float] = None
-    model_version: Optional[str] = None
+    predicted_tier: Optional[str] = None
+    confidence: Optional[float] = None
     created_at: Optional[datetime] = None
 
 
@@ -241,21 +249,31 @@ class PredictionListResponse(BaseModel):
     predictions: List[PredictionDBResponse]
     
 class CampaignCreateRequest(BaseModel):
-    company: str
-    campaign_type: Optional[str] = "manual"
+    campaign_name: str
+    campaign_intent: str
     platform: str
     budget: float
     duration_days: int
-    campaign_intent: str
     product_type: str
+    cta_type: str
+    # Audience row (same semantics as ``PredictionPreviewRequest`` / ``audience`` table)
+    audience_age: str = Field(..., description="Age band, e.g. 25-34")
+    audience_gender: str
+    audience_location: str
+    audience_interests: str
+    audience_temperature: str
+    customer_type: str
+    career: str
 
 
 class CampaignCreateResponse(BaseModel):
     campaign_id: int
-    company: str
-    campaign_type: Optional[str] = None
+    audience_id: int
+    ad_id: int
+    campaign_name: str
+    campaign_intent: str
     platform: str
     budget: float
     duration_days: int
-    campaign_intent: str
     product_type: str
+    cta_type: str
