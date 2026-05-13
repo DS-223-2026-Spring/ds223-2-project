@@ -7,6 +7,6 @@ deployments:
       name: advise-pool
 
   - name: docker-compose-recovery
-    entrypoint: scripts/docker_compose_recovery.py:safe_compose_up
+    entrypoint: scripts/safe_compose_up.py:safe_compose_up_flow
     work_pool:
       name: advise-pool
