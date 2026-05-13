@@ -1,37 +1,22 @@
-# API Assumptions and Pending Dependencies
+# API assumptions and follow-ups
 
-## Current API Status
+This page tracks **historical** notes and **optional** improvements; the primary contract is **OpenAPI** (`/openapi.json`) and **[API v1 examples](api/v1-endpoints.md)**.
 
-The backend currently includes:
+## Implemented (current)
 
-- FastAPI project structure
-- Swagger/OpenAPI documentation
-- Dummy CRUD endpoints for campaigns
-- Placeholder request/response schemas (Pydantic)
-- Dockerized services (API, DB, pgAdmin, Streamlit)
+- **PostgreSQL** — **`/v1/campaigns/`**, **`/v1/ads/`**, **`/v1/audience/`**, **`/v1/predictions/`** use **`get_db`** and **`schema.sql`** tables.
+- **Preview persistence** — **`POST /v1/predictions/preview`** with **`campaign_id`** + **`ad_id`** updates **`ads`**, upserts **`predictions`** on **`(campaign_id, predicted_metric)`**.
+- **Joblib inference** — when artifacts exist under **`ADVISE_DS_MODELS`**, preview resolves tier from trained models (see **[DS models & inference](ds-models.md)**).
+- **Legacy routes** — **`/campaigns`** (no **`v1`**) remain **in-memory** for demos; production UI should call **`/v1/*`**.
 
+## Optional / product follow-ups
 
+1. Remove or hide legacy non-**`v1`** routers if they confuse operators.
+2. Harden **`training_dataset`** ↔ live **`campaign_id`** linkage for **`predict.py`** DB writes when batch-scoring offline rows.
+3. Standardize error **`detail`** shapes across all routes (FastAPI default vs custom messages).
+4. Pin **scikit-learn** across **`AdVise/api/requirements.txt`** and the DS training env to reduce pickle warnings.
 
-## API Assumptions
+## Pending confirmation (stakeholder)
 
-The current implementation assumes:
-
-1. `campaigns` is a core resource of the system.
-2. Endpoints are currently using in-memory data (not DB yet).
-3. Schemas are placeholders and may change later.
-4. Frontend will consume FastAPI endpoints via HTTP.
-5. Backend runs inside Docker container (`back` service).
-
----
-
-## Pending Dependencies
-
-Still need confirmation from PM & DB Developer:
-
-1. Final resource names (campaigns, ads, etc.)
-2. Final database schema (tables, columns)
-3. Required endpoints for frontend
-4. Connecting API to real database
-5. Final validation rules
-6. Standard error response format
-
+- Long-term **auth** model for **`/v1/*`** (if any).
+- **SLAs** and rate limits for preview + campaign create.

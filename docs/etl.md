@@ -1,6 +1,6 @@
 # ETL and orchestration
 
-- [Home](index.md) · [API models](api_models.md) · [Schema diagram](imgs/star_schema.png)
+- [Home](index.md) · [API models](api_models.md) · [Project structure](project-structure.md) · [Schema diagram](imgs/star_schema.png)
 
 ## `AdVise/etl/` layout
 
@@ -15,12 +15,14 @@ AdVise/etl/db/
   data_raw/          # tech_advertising_campaigns_dataset.csv, marketing_campaign_dataset.csv
   data_clean/        # training_dataset.csv (from preprocessing; gitignored)
   sql/
-    schema.sql
-    db_checks.sql
-    apply_marketing_schema.sh
+    schema.sql                  # all CREATE TABLE + indexes + campaign CHECKs
+    db_checks.sql               # optional sanity queries
+    campaigns_schema_migration.sql  # one-time upgrade old campaigns shape → current
+    apply_marketing_schema.sh         # local: create DB + apply schema.sql only
   scripts/
     utils/
       db_utils.py
+      db_helpers.py
     preprocessing.py
     load_to_db.py
     populate_app_tables.py
@@ -31,7 +33,7 @@ AdVise/etl/db/
 1. `CREATE DATABASE` + schema: `bash AdVise/etl/db/sql/apply_marketing_schema.sh` (with `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `POSTGRES_HOST` from root `.env`).
 2. `python AdVise/etl/db/scripts/preprocessing.py` — reads **`data_raw/`** CSVs, writes **`data_clean/training_dataset.csv`**.
 3. `python AdVise/etl/db/scripts/load_to_db.py` — `TRUNCATE training_dataset` + bulk insert from that CSV (idempotent for the offline table).
-4. `python AdVise/etl/db/scripts/populate_app_tables.py` — inserts synthetic rows into **`campaigns`**, **`ads`**, **`audience`**, **`predictions`** (also run automatically in Docker after step 3).
+4. `python AdVise/etl/db/scripts/populate_app_tables.py` — inserts synthetic rows into **`campaigns`**, **`ads`**, **`audience`**, and **`predictions`** (three prediction rows per campaign for **`ctr`**, **`conversion_rate`**, and **`reach_score`**, matching **`uq_campaign_metric`**; also run automatically in Docker after step 3).
 
 For production, replace or extend synthetic data with real user/API-driven data as needed.
 

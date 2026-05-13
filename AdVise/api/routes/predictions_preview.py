@@ -4,6 +4,11 @@ Preview predictions aligned with ``campaign_intent`` → CTR / conversion / reac
 Loads tier classifiers when joblib artifacts are mounted under ``ADVISE_DS_MODELS``.
 Optional base64-encoded creative image runs a **Prefect** flow (``api-creative-extraction-preview``)
 that wraps ``creative_extract.extract_creative_features``.
+
+When ``campaign_id`` and ``ad_id`` are sent (e.g. after ``POST /v1/campaigns/``), the matching
+``ads`` row is updated with creative fields (including extraction output when an image is sent),
+then PostgreSQL ``predictions`` is upserted for ``(campaign_id, predicted_metric)`` (unique per
+campaign and target metric; same preview again updates tier/confidence and ``ad_id``).
 """
 
 from __future__ import annotations
@@ -14,9 +19,13 @@ import os
 import tempfile
 from uuid import uuid4
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from campaign_intent import resolve_target_metric
+from creative_prefect import extract_creative_for_preview
+from database import get_db
 from prediction_models import predict_tier_if_available
 from schema import (
     PredictionPreviewRequest,
@@ -24,7 +33,6 @@ from schema import (
     PredictionRunResponse,
     RecommendationBlock,
 )
-from creative_prefect import extract_creative_for_preview
 from training_vocab import (
     canonical_audience_temperature,
     canonical_campaign_intent,
@@ -47,6 +55,7 @@ prediction_runs = {}
 
 FEATURE_SNAPSHOT_KEYS = (
     "platform",
+    "budget",
     "duration_days",
     "campaign_intent",
     "product_type",
@@ -68,6 +77,7 @@ FEATURE_SNAPSHOT_KEYS = (
 
 def _feature_snapshot(feature_row: dict) -> dict:
     return {k: feature_row[k] for k in FEATURE_SNAPSHOT_KEYS if k in feature_row}
+
 
 MODEL_VERSION = os.environ.get("MODEL_VERSION", "v1-intent-mapping")
 
@@ -136,15 +146,115 @@ def _apply_creative_image_base64(
                 pass
 
 
+def _persist_ad_and_prediction(
+    db: Session,
+    *,
+    campaign_id: int,
+    ad_id: int,
+    feature_row: dict,
+    cta_type: str,
+    creative_url: str | None,
+    predicted_metric: str,
+    predicted_tier: str,
+    confidence: float,
+) -> int:
+    row = db.execute(
+        text("SELECT campaign_id FROM ads WHERE ad_id = :ad_id"),
+        {"ad_id": ad_id},
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=400, detail="ad_id not found")
+    if int(row[0]) != int(campaign_id):
+        raise HTTPException(
+            status_code=400,
+            detail="ad_id does not belong to the given campaign_id",
+        )
+
+    upd = db.execute(
+        text(
+            """
+            UPDATE ads SET
+                creative_type = :creative_type,
+                cta_type = :cta_type,
+                copy_text_length = :copy_text_length,
+                aspect_ratio = :aspect_ratio,
+                visual_complexity = :visual_complexity,
+                has_person = :has_person,
+                creative_url = COALESCE(:creative_url, creative_url)
+            WHERE ad_id = :ad_id AND campaign_id = :campaign_id
+            """
+        ),
+        {
+            "creative_type": str(feature_row.get("creative_type", "image")),
+            "cta_type": cta_type,
+            "copy_text_length": int(feature_row.get("copy_text_length", 15)),
+            "aspect_ratio": str(feature_row.get("aspect_ratio", "1:1")),
+            "visual_complexity": float(feature_row.get("visual_complexity", 0.5)),
+            "has_person": bool(feature_row.get("has_person", False)),
+            "creative_url": (
+                creative_url.strip()
+                if creative_url is not None and creative_url.strip()
+                else None
+            ),
+            "ad_id": ad_id,
+            "campaign_id": campaign_id,
+        },
+    )
+    if upd.rowcount == 0:
+        raise HTTPException(
+            status_code=500,
+            detail="UPDATE ads affected 0 rows (ad_id / campaign_id mismatch?)",
+        )
+
+    ins = db.execute(
+        text(
+            """
+            INSERT INTO predictions (
+                campaign_id, ad_id, predicted_metric, predicted_tier, confidence
+            )
+            VALUES (
+                :campaign_id, :ad_id, :metric, :tier, :confidence
+            )
+            ON CONFLICT ON CONSTRAINT uq_campaign_metric
+            DO UPDATE SET
+                ad_id = EXCLUDED.ad_id,
+                predicted_tier = EXCLUDED.predicted_tier,
+                confidence = EXCLUDED.confidence
+            RETURNING prediction_id
+            """
+        ),
+        {
+            "campaign_id": campaign_id,
+            "ad_id": ad_id,
+            "metric": predicted_metric,
+            "tier": str(predicted_tier),
+            "confidence": float(confidence),
+        },
+    ).mappings().first()
+    if not ins:
+        raise HTTPException(status_code=500, detail="prediction INSERT returned no row")
+    db.commit()
+    return int(ins["prediction_id"])
+
+
 @router.post("/predictions/preview", response_model=PredictionPreviewResponse)
-def preview_prediction(payload: PredictionPreviewRequest):
+def preview_prediction(payload: PredictionPreviewRequest, db: Session = Depends(get_db)):
     run_id = str(uuid4())
     intent_raw = payload.campaign_intent.strip()
     target_metric, target_label = resolve_target_metric(intent_raw)
     intent_model = canonical_campaign_intent(intent_raw)
 
+    cid = payload.campaign_id
+    aid = payload.ad_id
+    if (cid is None) ^ (aid is None):
+        raise HTTPException(
+            status_code=422,
+            detail="Provide both campaign_id and ad_id to persist the preview, or omit both.",
+        )
+
     feature_row: dict = {
         "platform": canonical_platform(payload.platform),
+        "budget": float(payload.budget),
         "duration_days": payload.duration_days,
         "campaign_intent": intent_model,
         "product_type": canonical_product_type(payload.product_type),
@@ -213,6 +323,33 @@ def preview_prediction(payload: PredictionPreviewRequest):
             )
         )
 
+    prediction_id = None
+    if cid is not None and aid is not None:
+        try:
+            cta_for_ad = str(feature_row["cta_type"])
+            asset_url = (payload.creative_asset_url or "").strip() or None
+            prediction_id = _persist_ad_and_prediction(
+                db,
+                campaign_id=cid,
+                ad_id=aid,
+                feature_row=feature_row,
+                cta_type=cta_for_ad,
+                creative_url=asset_url,
+                predicted_metric=target_metric,
+                predicted_tier=str(predicted_tier),
+                confidence=float(prediction_confidence),
+            )
+        except HTTPException:
+            db.rollback()
+            raise
+        except Exception as exc:  # noqa: BLE001
+            db.rollback()
+            log.exception("Failed to persist preview (ads / predictions): %s", exc)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Could not save ads/prediction rows: {exc}",
+            ) from exc
+
     response = PredictionPreviewResponse(
         run_id=run_id,
         status="success",
@@ -226,6 +363,7 @@ def preview_prediction(payload: PredictionPreviewRequest):
         input_summary=_input_summary(payload),
         creative_features=creative_feats,
         model_feature_snapshot=model_feature_snapshot,
+        prediction_id=prediction_id,
     )
 
     prediction_runs[run_id] = _response_to_dict(response)
@@ -248,6 +386,7 @@ def get_prediction_run(run_id: str):
             input_summary={},
             creative_features=None,
             model_feature_snapshot=None,
+            prediction_id=None,
         )
 
     return _parse_stored_prediction(prediction_runs[run_id])

@@ -1,9 +1,10 @@
 """
 Campaign intent → prediction target (aligned with DS train.py / predict.py).
 
-The ETL-backed `predictions` table stores multiple numeric slots; marketing UX
-shows one primary outcome per intent. Classification models (when present under
-AdVise/ds/models/) are trained per target column name below.
+The live ``predictions`` table stores at most one row per ``(campaign_id, predicted_metric)``
+(unique constraint ``uq_campaign_metric``); ``ad_id`` points at the creative last scored for
+that outcome. Marketing UX resolves one primary outcome per intent. Classification models
+(when present under ``AdVise/ds/models/``) are trained per target column name below.
 """
 
 from __future__ import annotations

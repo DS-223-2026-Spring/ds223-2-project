@@ -30,6 +30,38 @@ def models_dir() -> str:
     return os.environ.get("ADVISE_DS_MODELS", _DEFAULT_REL)
 
 
+def _derive_training_features(row: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Add columns produced by ``AdVise/ds/modeling_related_files.engineer_features``
+    so live preview rows match ``feature_cols_<target>.pkl``.
+    """
+    out = dict(row)
+    duration_days = float(out.get("duration_days") or 1)
+    duration_days = max(duration_days, 1.0)
+    copy_len = int(out.get("copy_text_length", 15) or 15)
+
+    if "copy_length_bucket" not in out:
+        if copy_len <= 10:
+            out["copy_length_bucket"] = "short"
+        elif copy_len <= 30:
+            out["copy_length_bucket"] = "medium"
+        else:
+            out["copy_length_bucket"] = "long"
+
+    if "budget_per_day" not in out:
+        budget = float(out.get("budget", 0) or 0)
+        out["budget_per_day"] = budget / (duration_days + 1.0)
+
+    if "engagement_per_day" not in out:
+        eng = float(out.get("engagement_score", 1.0) or 1.0)
+        out["engagement_per_day"] = eng / (duration_days + 1.0)
+
+    if "multi_metric_mean" not in out:
+        out["multi_metric_mean"] = float(out.get("lead_rate", 0.05) or 0.05)
+
+    return out
+
+
 def _pick_model_bundle(target_metric: str) -> Tuple[str, str, str] | None:
     """
     Prefer ``model_<target>.pkl`` + matching encoders + feature_cols; fall back
@@ -93,9 +125,10 @@ def predict_tier_if_available(
 
     import pandas as pd  # noqa: WPS433
 
+    feature_row = _derive_training_features(feature_row)
     missing = [c for c in feature_cols if c not in feature_row]
     if missing:
-        log.debug("DS inference skipped; missing features: %s", missing)
+        log.warning("DS inference skipped; missing features after enrich: %s", missing)
         return None
 
     df = pd.DataFrame([{c: feature_row[c] for c in feature_cols}])

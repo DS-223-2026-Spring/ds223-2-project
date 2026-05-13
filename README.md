@@ -1,4 +1,8 @@
-# AdVise — Dockerized PostgreSQL, pgAdmin, FastAPI, Streamlit, and DS
+# AdVise — Predict Before You Launch
+
+AdVise is an AI-powered marketing analytics platform that predicts the potential success of advertising campaigns before they go live. By analyzing creatives, audience details, campaign goals, and budget inputs, AdVise provides performance forecasts such as predicted CTR, conversion rate, engagement, and reach.
+
+The platform helps marketers identify the strongest creatives, optimize campaign strategy early, and reduce wasted ad spend through data-driven insights and machine learning predictions.
 
 ## Branches
 
@@ -25,7 +29,7 @@ This repository contains the following branches:
 
 ## Presentation 
 
-**Follow to [this](https://hovhannisyan91.github.io/pythonmicroservicedesign/) link.**
+**Documentation (MkDocs / GitHub Pages):** [https://ds-223-2026-spring.github.io/ds223-2-project/](https://ds-223-2026-spring.github.io/ds223-2-project/) — enable **Pages** in the repo settings if this 404s; you can always run **`mkdocs serve`** locally. **Source:** [github.com/DS-223-2026-Spring/ds223-2-project](https://github.com/DS-223-2026-Spring/ds223-2-project).
 
 ## Installation
 

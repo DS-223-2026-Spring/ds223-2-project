@@ -1,6 +1,6 @@
 # DS 223 Marketing Analytics – Group Project Demo
 
-- [Home](index.md) · [API](api.md) · [ETL notes](etl.md)
+- [Home](index.md) · [Project structure](project-structure.md) · [API](api.md) · [ETL notes](etl.md)
 
 ## Product Overview
 

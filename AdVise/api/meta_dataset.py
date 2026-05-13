@@ -16,6 +16,9 @@ WHITE_MAP: Mapping[str, str] = {
     "product_type": "product_types",
     "location": "regions",
     "age": "age_bands",
+    "gender": "genders",
+    "interests": "interests",
+    "career": "careers",
 }
 
 _FALLBACK_DEVICES = ["mobile", "desktop", "tablet"]

@@ -27,6 +27,30 @@ def _static_enums() -> dict[str, list[str]]:
         "product_types": list(POOL_PRODUCT_TYPES),
         "regions": ["US", "UK", "India", "Canada", "Germany", "France", "Armenia"],
         "age_bands": ["18-24", "25-34", "35-44", "45-54", "55+"],
+        "genders": ["male", "female"],
+        "interests": [
+            "tech",
+            "fashion",
+            "food",
+            "sports",
+            "travel",
+            "music",
+            "fitness",
+            "finance",
+            "gaming",
+            "beauty",
+        ],
+        "careers": [
+            "student",
+            "professional",
+            "entrepreneur",
+            "freelancer",
+            "manager",
+            "engineer",
+            "teacher",
+            "healthcare",
+            "other",
+        ],
     }
 
 
@@ -48,4 +72,7 @@ def get_enums(db: Session = Depends(get_db)):
         product_types=merged["product_types"],
         regions=merged["regions"],
         age_bands=merged["age_bands"],
+        genders=merged["genders"],
+        interests=merged["interests"],
+        careers=merged["careers"],
     )

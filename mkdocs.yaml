@@ -2,9 +2,11 @@
 site_name: AdVise
 docs_dir: docs
 site_dir: site
-repo_name: hovhannisyan91/pythonmicroservicedesign
-repo_url: https://github.com/hovhannisyan91/pythonmicroservicedesign
+repo_name: DS-223-2026-Spring/ds223-2-project
+repo_url: https://github.com/DS-223-2026-Spring/ds223-2-project
 edit_uri: edit/main/docs/
+# GitHub Pages project site (when enabled for this repo).
+site_url: https://ds-223-2026-spring.github.io/ds223-2-project/
 
 theme:
   name: material
@@ -25,6 +27,8 @@ theme:
 
 nav:
   - Home: index.md
+  - "Project structure": project-structure.md
+  - "Database ERD": erd.md
   - API: api.md
   - "API (models)": api_models.md
   - "API v1 (examples)": api/v1-endpoints.md
@@ -33,6 +37,8 @@ nav:
   - "Endpoint spec alignment": api/endpoint-spec-alignment.md
   - Streamlit app: app.md
   - ETL: etl.md
+  - "DS models & inference": ds-models.md
+  - Scripts: scripts.md
   - Demo: demo.md
   - API Assumptions: api_assumptions.md
 
@@ -53,7 +59,12 @@ plugins:
 markdown_extensions:
   - admonition
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        # Use fence_code_format so Material initializes Mermaid (fence_div_format renders as inert text).
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - tables
   - toc:
       permalink: true

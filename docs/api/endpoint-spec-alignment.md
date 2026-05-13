@@ -10,7 +10,7 @@ Historical assignee sheets described **multipart** `POST /v1/predictions/preview
 | `POST /v1/predictions/preview` | JSON body only | `PredictionPreviewRequest`. No multipart; creative features are stubs server-side. |
 | Prefect integration in API path | No | Creative pipeline lives under `AdVise/ds/Feature_extraction_automatation_pipelines.py`; trigger via CLI / deployment worker, not from FastAPI. |
 | `GET /v1/prediction-runs/{run_id}` | Yes | Ephemeral dict in process memory; lost on restart. |
-| Saved campaigns CRUD | Partial | Demo routes under `/campaigns` (in-memory JSON); Postgres-backed lists under **`/v1/campaigns/`** (read-only SELECT). |
+| Saved campaigns | Yes | **`POST /v1/campaigns/`** inserts `campaigns` + `audience` in one transaction; **`GET /v1/campaigns/`** lists rows. Legacy demo `/campaigns` (in-memory) may still exist. |
 
 **Frontend locations:** Streamlit entry is **`AdVise/app/app.py`**; multi-page flows live under **`AdVise/app/pages/`** when present (`2_Campaign_Input.py` uses **`AdVise/app/api_client.py`**).
 

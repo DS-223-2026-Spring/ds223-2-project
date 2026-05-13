@@ -634,7 +634,49 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "campaigns"
+        ],
+        "summary": "Create Campaign",
+        "description": "Persist a campaign, audience row, and a placeholder ad (for preview / predictions FK) in one transaction.",
+        "operationId": "create_campaign_v1_campaigns__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -654,7 +696,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AdListResponse"
+                }
               }
             }
           }
@@ -674,7 +718,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AudienceListResponse"
+                }
               }
             }
           }
@@ -694,7 +740,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionListResponse"
+                }
               }
             }
           }
@@ -742,6 +790,140 @@
           "creative_type"
         ],
         "title": "AdCreate"
+      },
+      "AdDBResponse": {
+        "properties": {
+          "ad_id": {
+            "type": "integer",
+            "title": "Ad Id"
+          },
+          "campaign_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Campaign Id"
+          },
+          "creative_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Creative Type"
+          },
+          "cta_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cta Type"
+          },
+          "copy_text_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Copy Text Length"
+          },
+          "aspect_ratio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aspect Ratio"
+          },
+          "visual_complexity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visual Complexity"
+          },
+          "has_person": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has Person"
+          },
+          "creative_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Creative Url"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ad_id"
+        ],
+        "title": "AdDBResponse"
+      },
+      "AdListResponse": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "ads": {
+            "items": {
+              "$ref": "#/components/schemas/AdDBResponse"
+            },
+            "type": "array",
+            "title": "Ads"
+          }
+        },
+        "type": "object",
+        "required": [
+          "count",
+          "ads"
+        ],
+        "title": "AdListResponse"
       },
       "AdResponse": {
         "properties": {
@@ -799,6 +981,140 @@
         ],
         "title": "AudienceCreate"
       },
+      "AudienceDBResponse": {
+        "properties": {
+          "audience_id": {
+            "type": "integer",
+            "title": "Audience Id"
+          },
+          "campaign_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Campaign Id"
+          },
+          "age": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "interests": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interests"
+          },
+          "audience_temperature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audience Temperature"
+          },
+          "customer_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Type"
+          },
+          "career": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Career"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "audience_id"
+        ],
+        "title": "AudienceDBResponse"
+      },
+      "AudienceListResponse": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "audience": {
+            "items": {
+              "$ref": "#/components/schemas/AudienceDBResponse"
+            },
+            "type": "array",
+            "title": "Audience"
+          }
+        },
+        "type": "object",
+        "required": [
+          "count",
+          "audience"
+        ],
+        "title": "AudienceListResponse"
+      },
       "AudienceResponse": {
         "properties": {
           "age": {
@@ -854,6 +1170,266 @@
           "platform"
         ],
         "title": "CampaignCreate"
+      },
+      "CampaignCreateRequest": {
+        "properties": {
+          "campaign_name": {
+            "type": "string",
+            "title": "Campaign Name"
+          },
+          "campaign_intent": {
+            "type": "string",
+            "title": "Campaign Intent"
+          },
+          "platform": {
+            "type": "string",
+            "title": "Platform"
+          },
+          "budget": {
+            "type": "number",
+            "title": "Budget"
+          },
+          "duration_days": {
+            "type": "integer",
+            "title": "Duration Days"
+          },
+          "product_type": {
+            "type": "string",
+            "title": "Product Type"
+          },
+          "cta_type": {
+            "type": "string",
+            "title": "Cta Type"
+          },
+          "audience_age": {
+            "type": "string",
+            "title": "Audience Age",
+            "description": "Age band, e.g. 25-34"
+          },
+          "audience_gender": {
+            "type": "string",
+            "title": "Audience Gender"
+          },
+          "audience_location": {
+            "type": "string",
+            "title": "Audience Location"
+          },
+          "audience_interests": {
+            "type": "string",
+            "title": "Audience Interests"
+          },
+          "audience_temperature": {
+            "type": "string",
+            "title": "Audience Temperature"
+          },
+          "customer_type": {
+            "type": "string",
+            "title": "Customer Type"
+          },
+          "career": {
+            "type": "string",
+            "title": "Career"
+          }
+        },
+        "type": "object",
+        "required": [
+          "campaign_name",
+          "campaign_intent",
+          "platform",
+          "budget",
+          "duration_days",
+          "product_type",
+          "cta_type",
+          "audience_age",
+          "audience_gender",
+          "audience_location",
+          "audience_interests",
+          "audience_temperature",
+          "customer_type",
+          "career"
+        ],
+        "title": "CampaignCreateRequest"
+      },
+      "CampaignCreateResponse": {
+        "properties": {
+          "campaign_id": {
+            "type": "integer",
+            "title": "Campaign Id"
+          },
+          "audience_id": {
+            "type": "integer",
+            "title": "Audience Id"
+          },
+          "ad_id": {
+            "type": "integer",
+            "title": "Ad Id"
+          },
+          "campaign_name": {
+            "type": "string",
+            "title": "Campaign Name"
+          },
+          "campaign_intent": {
+            "type": "string",
+            "title": "Campaign Intent"
+          },
+          "platform": {
+            "type": "string",
+            "title": "Platform"
+          },
+          "budget": {
+            "type": "number",
+            "title": "Budget"
+          },
+          "duration_days": {
+            "type": "integer",
+            "title": "Duration Days"
+          },
+          "product_type": {
+            "type": "string",
+            "title": "Product Type"
+          },
+          "cta_type": {
+            "type": "string",
+            "title": "Cta Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "campaign_id",
+          "audience_id",
+          "ad_id",
+          "campaign_name",
+          "campaign_intent",
+          "platform",
+          "budget",
+          "duration_days",
+          "product_type",
+          "cta_type"
+        ],
+        "title": "CampaignCreateResponse"
+      },
+      "CampaignDBResponse": {
+        "properties": {
+          "campaign_id": {
+            "type": "integer",
+            "title": "Campaign Id"
+          },
+          "campaign_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Campaign Name"
+          },
+          "campaign_intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Campaign Intent"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform"
+          },
+          "budget": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget"
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          },
+          "product_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Type"
+          },
+          "cta_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cta Type"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "campaign_id"
+        ],
+        "title": "CampaignDBResponse"
+      },
+      "CampaignListResponse": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "campaigns": {
+            "items": {
+              "$ref": "#/components/schemas/CampaignDBResponse"
+            },
+            "type": "array",
+            "title": "Campaigns"
+          }
+        },
+        "type": "object",
+        "required": [
+          "count",
+          "campaigns"
+        ],
+        "title": "CampaignListResponse"
       },
       "CampaignResponse": {
         "properties": {
@@ -960,6 +1536,27 @@
             },
             "type": "array",
             "title": "Age Bands"
+          },
+          "genders": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Genders"
+          },
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Interests"
+          },
+          "careers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Careers"
           }
         },
         "type": "object",
@@ -972,7 +1569,10 @@
           "customer_types",
           "product_types",
           "regions",
-          "age_bands"
+          "age_bands",
+          "genders",
+          "interests",
+          "careers"
         ],
         "title": "MetaEnumsResponse"
       },
@@ -998,6 +1598,107 @@
           "predicted_conversion_rate"
         ],
         "title": "PredictionCreate"
+      },
+      "PredictionDBResponse": {
+        "properties": {
+          "prediction_id": {
+            "type": "integer",
+            "title": "Prediction Id"
+          },
+          "campaign_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Campaign Id"
+          },
+          "ad_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ad Id"
+          },
+          "predicted_metric": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Metric"
+          },
+          "predicted_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Tier"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prediction_id"
+        ],
+        "title": "PredictionDBResponse"
+      },
+      "PredictionListResponse": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "predictions": {
+            "items": {
+              "$ref": "#/components/schemas/PredictionDBResponse"
+            },
+            "type": "array",
+            "title": "Predictions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "count",
+          "predictions"
+        ],
+        "title": "PredictionListResponse"
       },
       "PredictionPreviewRequest": {
         "properties": {
@@ -1112,6 +1813,42 @@
               }
             ],
             "title": "Creative Image Base64"
+          },
+          "creative_asset_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Creative Asset Url",
+            "description": "Hosted creative URL for ads.creative_url"
+          },
+          "campaign_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Campaign Id"
+          },
+          "ad_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ad Id"
           }
         },
         "type": "object",
@@ -1210,6 +1947,18 @@
               }
             ],
             "title": "Model Feature Snapshot"
+          },
+          "prediction_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prediction Id",
+            "description": "Row id after preview upserts PostgreSQL predictions (one row per campaign + metric)."
           }
         },
         "type": "object",
@@ -1336,6 +2085,18 @@
               }
             ],
             "title": "Model Feature Snapshot"
+          },
+          "prediction_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prediction Id",
+            "description": "Row id after preview upserts PostgreSQL predictions (one row per campaign + metric)."
           }
         },
         "type": "object",
