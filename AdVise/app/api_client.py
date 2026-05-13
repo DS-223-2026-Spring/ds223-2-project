@@ -61,3 +61,18 @@ def submit_preview_prediction(payload: dict):
         return response.json(), response.status_code
     except requests.exceptions.RequestException:
         return None, None
+
+def create_campaign(payload: dict) -> dict:
+    """
+    POST /v1/campaigns/ to persist campaign data in PostgreSQL.
+    """
+    try:
+        response = requests.post(
+            f"{API_BASE_URL}/v1/campaigns/",
+            json=payload,
+            timeout=15,
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as exc:
+        return {"error": str(exc)}
