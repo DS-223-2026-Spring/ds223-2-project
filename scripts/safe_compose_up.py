@@ -10,6 +10,10 @@ from prefect import flow, get_run_logger, task
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _compose_file() -> Path:
+    return ROOT / "docker-compose.yml"
+
+
 def find_docker_compose_command() -> list[str]:
     if shutil.which("docker"):
         try:
@@ -31,8 +35,32 @@ def find_docker_compose_command() -> list[str]:
 
 @task
 def run_compose(args: list[str]) -> None:
+    logger = get_run_logger()
+    if not _compose_file().is_file():
+        raise FileNotFoundError(
+            f"Expected docker-compose.yml at {_compose_file()} (cwd for compose is {ROOT}). "
+            "Prefect worker must run with repo root as the parent of scripts/."
+        )
+
     cmd = [*find_docker_compose_command(), *args]
-    subprocess.run(cmd, cwd=ROOT, check=True)
+    logger.info("Running: %s (cwd=%s)", " ".join(cmd), ROOT)
+    proc = subprocess.run(
+        cmd,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        logger.error(
+            "Command failed exit=%s cmd=%s\n--- stdout ---\n%s\n--- stderr ---\n%s",
+            proc.returncode,
+            cmd,
+            proc.stdout or "",
+            proc.stderr or "",
+        )
+        raise subprocess.CalledProcessError(
+            proc.returncode, cmd, output=proc.stdout, stderr=proc.stderr
+        )
 
 
 @task
