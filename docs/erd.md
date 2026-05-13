@@ -1,6 +1,6 @@
 # Database ERD (live + training)
 
-Entity-relationship view of tables in **`AdVise/etl/db/sql/schema.sql`**.
+Entity-relationship view of tables in **`AdVise/etl/db/sql/schema.sql`**. See also [Project structure](project-structure.md) for Compose and env context.
 
 **Rendering the diagram:** In **MkDocs** (`mkdocs serve` / `mkdocs build`), the Mermaid block below should draw as a diagram when **`fence_code_format`** is set for the `mermaid` custom fence in **`mkdocs.yaml`** (see [Material: Diagrams](https://squidfunk.github.io/mkdocs-material/reference/diagrams/)). The **Cursor / VS Code Markdown preview** often shows Mermaid as a single line of code; use the **ASCII ERD** in that case, or open the built **`site/erd/index.html`** in a browser.
 

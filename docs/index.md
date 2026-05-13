@@ -1,30 +1,42 @@
 # AdVise
 
-This project uses Docker and Docker Compose to connect **AdVise** services: PostgreSQL, a one-shot marketing ETL under **`AdVise/etl`**, a FastAPI backend, a Streamlit app, and pgAdmin. The **ETL** runs before the API in the default stack (requires source CSVs in `AdVise/etl/db/data_raw/`). Data science / Jupyter work lives in **`AdVise/ds`**.
+Dockerized stack: **PostgreSQL**, one-shot **ETL** (`AdVise/etl/db`), **FastAPI** (`AdVise/api`), **Streamlit** (`AdVise/app`), optional **pgAdmin**. Source: **[github.com/DS-223-2026-Spring/ds223-2-project](https://github.com/DS-223-2026-Spring/ds223-2-project)**. Default **`docker compose up --build`** waits for **`etl_db`** to finish before starting **`back`** and **`front`**.
 
-## Documentation pages
+## Documentation map
 
-- [Database ERD](erd.md) — schema diagram from `AdVise/etl/db/sql/schema.sql`
-- [API (FastAPI entry and routes)](api.md) — `main` and related modules
-- [API models (SQLAlchemy)](api_models.md) — database model definitions
-- [Streamlit application](app.md) — `app` package reference
-- [ETL and orchestration](etl.md) — design notes and next steps
-- [Group demo script](demo.md) — talking points and demo flow
-- [API Assumptions and Pending Dependencies](api_assumptions.md)
+| Topic | Page |
+|-------|------|
+| Repo tree, Compose order, env vars | [Project structure](project-structure.md) |
+| Database tables + ERD | [Database ERD](erd.md) |
+| FastAPI entry + mkdocstrings | [API](api.md) |
+| SQLAlchemy models | [API models](api_models.md) |
+| **`/v1/*`** JSON examples | [API v1 (examples)](api/v1-endpoints.md) |
+| OpenAPI export | [API / OpenAPI refresh](api/README.md) |
+| Prefect + creative preview | [Prefect orchestration](api/prefect-orchestration.md) |
+| Stakeholder spec notes | [Endpoint spec alignment](api/endpoint-spec-alignment.md) |
+| Streamlit pages | [Streamlit app](app.md) |
+| ETL steps + `data_raw` | [ETL](etl.md) |
+| **`train.py`**, joblib, live inference | [DS models & inference](ds-models.md) |
+| Root **`scripts/`** | [Scripts](scripts.md) |
+| Demo talking points | [Demo](demo.md) |
+| Legacy assumptions tracker | [API assumptions](api_assumptions.md) |
 
-The file **`index.html`** in this same folder is a static HTML page you can open directly in a browser (it is not used as the MkDocs home page, because the site is generated from this `index.md` file; MkDocs will skip copying `index.html` into `site/` when `index.md` is present, which is expected).
+The file **`index.html`** in this folder is a static page you can open directly; MkDocs builds from **`index.md`** and will not treat **`index.html`** as the site home when **`index.md`** exists.
 
-## How it works?
+## How it works (slides)
 
 [End-to-end tutorial (slides)](https://hovhannisyan91.github.io/DS223_Group_Project/#/title-slide).
 
-## Services
+## Services (default Compose)
 
-* **Database** – PostgreSQL.
-* **ETL** – Marketing pipeline under `AdVise/etl/db` (Compose service `etl_db`, runs before `back` when you `docker compose up`).
-* **ds** – Jupyter / modeling under `AdVise/ds` (optional Compose `data-science` profile).
-* **API** – FastAPI that talks to PostgreSQL.
-* **Front** – Streamlit UI that calls the API (Compose service **`front`**; code in **`AdVise/app/`**).
-* **pgAdmin** – Web UI to inspect and manage the database.
-* **Docs** – This site, built with [MkDocs](https://www.mkdocs.org/) (run `mkdocs serve` from the repository root to preview).
+| Service | Role |
+|---------|------|
+| **`db`** | PostgreSQL 17; data dir **`./postgres_data`**. |
+| **`etl_db`** | One-shot: **`schema.sql`** → preprocessing → **`training_dataset`** → synthetic live tables. |
+| **`back`** | FastAPI on **8000** in the network, **8008** on the host; **`/docs`** Swagger. |
+| **`front`** | Streamlit on **8501**; calls **`back`** via **`API_URL`**. |
+| **`pgadmin`** | Web UI for Postgres (**`PGADMIN_PORT`**, default **5050**). |
+| **`ds_batch_visuals`** (profile) | Optional: **`predict.py`** + **`generate_visuals.py`** into **`AdVise/ds/outputs`**. |
+| **`ds`** (profile) | Optional Jupyter under **`AdVise/`**. |
 
+Build the doc site from the repo root: **`mkdocs serve`** or **`mkdocs build`** (see **`mkdocs.yaml`**).

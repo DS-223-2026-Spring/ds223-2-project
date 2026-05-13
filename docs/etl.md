@@ -1,6 +1,6 @@
 # ETL and orchestration
 
-- [Home](index.md) · [API models](api_models.md) · [Schema diagram](imgs/star_schema.png)
+- [Home](index.md) · [API models](api_models.md) · [Project structure](project-structure.md) · [Schema diagram](imgs/star_schema.png)
 
 ## `AdVise/etl/` layout
 
@@ -22,6 +22,7 @@ AdVise/etl/db/
   scripts/
     utils/
       db_utils.py
+      db_helpers.py
     preprocessing.py
     load_to_db.py
     populate_app_tables.py

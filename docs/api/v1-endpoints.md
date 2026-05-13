@@ -25,11 +25,11 @@ OpenAPI (`/openapi.json`) and Swagger UI (`/docs`) are the authoritative machine
     "max_file_size_mb": 10,
     "allowed_types": ["png", "jpg", "jpeg", "pdf"]
   },
-  "prefect_available": false
+  "prefect_available": true
 }
 ```
 
-Set environment variable **`ADVISE_PREFECT_AVAILABLE=true`** on the API service if a Prefect worker for creative extraction is reachable; the field is exposed for UX only.
+In the default **Compose** stack, **`ADVISE_PREFECT_AVAILABLE=true`** is set on **`back`**, so **`prefect_available`** is usually **`true`**. Override in **`.env`** only if you need **`false`** for local debugging (field is UX-only for creative extraction wiring).
 
 ---
 
