@@ -35,22 +35,56 @@ os.makedirs(OUTPUTS_DIR, exist_ok=True)
 # ──────────────────────────────────────────────────────────────────────────────
 # 1. DATA LOADING
 # ──────────────────────────────────────────────────────────────────────────────
-def load_data(csv_path: str) -> pd.DataFrame:
-    """Load data from DB; fall back to CSV if DB is unavailable."""
-    try:
-        sys.path.append(os.path.abspath("../etl/db/scripts/utils"))
-        from db_helpers import get_connection
+import importlib.util
 
-        conn = get_connection()
+def _load_db_helpers():
+    utils_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "../etl/db/scripts/utils")
+    )
+    spec = importlib.util.spec_from_file_location(
+        "db_helpers", os.path.join(utils_path, "db_helpers.py")
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+def load_data(csv_path: str) -> pd.DataFrame:
+    try:
+        db = _load_db_helpers()
+        conn = db.get_connection()
         query = """
-            SELECT *
-            FROM training_dataset
+            SELECT
+                c.campaign_id,
+                cr.ad_id,
+                c.platform,
+                c.budget,
+                c.duration_days,
+                c.campaign_intent,
+                c.product_type,
+                c.cta_type,
+                a.age,
+                a.gender,
+                a.location,
+                a.interests,
+                a.audience_temperature,
+                a.customer_type,
+                a.career,
+                cr.creative_type,
+                cr.copy_text_length,
+                cr.aspect_ratio,
+                cr.visual_complexity,
+                cr.has_person,
+                p.predicted_lead_rate AS lead_rate,
+                p.predicted_engagement_score AS engagement_score
+            FROM campaigns c
+            JOIN audience a ON a.campaign_id = c.campaign_id
+            JOIN ads cr ON cr.campaign_id = c.campaign_id
+            LEFT JOIN predictions p ON p.campaign_id = c.campaign_id
         """
         df = pd.read_sql(query, conn)
         conn.close()
         print(f"Loaded {len(df):,} rows from DB.")
         return df
-
     except Exception as e:
         print(f"DB unavailable ({e}), loading from CSV: {csv_path}")
         df = pd.read_csv(csv_path)
@@ -70,6 +104,7 @@ def run_predictions(df: pd.DataFrame, model, encoders: dict, target: str = "ctr"
     """
     # Keep campaign_id if it exists (from DB), for writing back
     id_col = df["campaign_id"] if "campaign_id" in df.columns else None
+    ad_id_col = df["ad_id"] if "ad_id" in df.columns else None
 
     # Keep actual CTR if available (for reference)
     actual_ctr = df[target] if target in df.columns else None
@@ -89,6 +124,8 @@ def run_predictions(df: pd.DataFrame, model, encoders: dict, target: str = "ctr"
         f"predicted_{target}_tier": predicted_tier,
         "confidence_score": confidence,
     })
+    if ad_id_col is not None:
+        results.insert(0, "ad_id", ad_id_col.values)
 
     # Add actual CTR for reference if available
     if actual_ctr is not None:
@@ -130,7 +167,6 @@ def save_to_csv(results: pd.DataFrame, output_path: str):
 # 4. WRITE BACK TO DB
 # ──────────────────────────────────────────────────────────────────────────────
 def write_to_db(results: pd.DataFrame):
-    """Write prediction results back to the predictions table in the DB."""
     try:
         sys.path.append(os.path.abspath("../etl/db/scripts/utils"))
         from db_helpers import get_connection
@@ -178,10 +214,9 @@ def write_to_db(results: pd.DataFrame):
         conn.commit()
         cur.close()
         conn.close()
-        print(f"Written {updated:,} rows back to DB predictions table.")
-
+        print(f"Inserted/updated {inserted:,} rows in predictions table.")
     except Exception as e:
-        print(f"DB write skipped ({e}). Results are saved in CSV only.")
+        print(f"DB write skipped ({e}). Results saved in CSV only.")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
