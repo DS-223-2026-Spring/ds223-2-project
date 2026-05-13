@@ -1,6 +1,6 @@
 import base64
 import streamlit as st
-from ui_components import page_header, placeholder_box
+from ui_components import inject_global_css, page_header, placeholder_box
 from api_client import get_status, get_enums, submit_preview_prediction, create_campaign
 
 st.set_page_config(page_title="Campaign Input — AdVise", layout="wide")

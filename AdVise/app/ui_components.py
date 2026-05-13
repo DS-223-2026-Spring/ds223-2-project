@@ -1,14 +1,15 @@
 import streamlit as st
 
-# ── Brand tokens ──────────────────────────────────────────────────────────────
+# ── Brand tokens (dark shell) ─────────────────────────────────────────────────
 PRIMARY      = "#4A90D9"
 SUCCESS      = "#2ecc71"
 WARNING      = "#f39c12"
 DANGER       = "#e74c3c"
-BG_DARK      = "#ffffff"
-SURFACE      = "#f5f7fa"
-BORDER       = "#e0e4ef"
-TEXT_MUTED   = "#6b7280"
+BG_DARK      = "#0e1117"
+SURFACE      = "#161b22"
+BORDER       = "#30363d"
+TEXT_MUTED   = "#8b949e"
+TEXT_MAIN    = "#e6edf3"
 
 TIER_COLOR = {"high": SUCCESS, "medium": WARNING, "low": DANGER}
 
@@ -25,8 +26,13 @@ def inject_global_css():
         }}
 
         /* ── Page background ── */
-        .stApp {{
+        .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
             background: {BG_DARK};
+            color: {TEXT_MAIN};
+        }}
+
+        [data-testid="stMarkdownContainer"] p, [data-testid="stMarkdownContainer"] li {{
+            color: {TEXT_MAIN};
         }}
 
         /* ── Sidebar ── */
@@ -39,6 +45,7 @@ def inject_global_css():
         h1, h2, h3 {{
             font-family: 'Space Mono', monospace !important;
             letter-spacing: -0.02em;
+            color: {TEXT_MAIN} !important;
         }}
 
         /* ── Metric value ── */
@@ -109,7 +116,7 @@ def page_header(title: str, subtitle: str | None = None):
         f"""
         <div style="margin-bottom:0.5rem">
           <h1 style="margin-bottom:0.1rem">{title}</h1>
-          {"<p style='color:#8b8fa8;font-size:0.9rem;margin-top:0'>" + subtitle + "</p>" if subtitle else ""}
+          {"<p style='color:" + TEXT_MUTED + ";font-size:0.9rem;margin-top:0'>" + subtitle + "</p>" if subtitle else ""}
         </div>
         """,
         unsafe_allow_html=True,
