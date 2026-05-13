@@ -55,6 +55,7 @@ prediction_runs = {}
 
 FEATURE_SNAPSHOT_KEYS = (
     "platform",
+    "budget",
     "duration_days",
     "campaign_intent",
     "product_type",
@@ -253,6 +254,7 @@ def preview_prediction(payload: PredictionPreviewRequest, db: Session = Depends(
 
     feature_row: dict = {
         "platform": canonical_platform(payload.platform),
+        "budget": float(payload.budget),
         "duration_days": payload.duration_days,
         "campaign_intent": intent_model,
         "product_type": canonical_product_type(payload.product_type),
