@@ -168,31 +168,49 @@ def save_to_csv(results: pd.DataFrame, output_path: str):
 # ──────────────────────────────────────────────────────────────────────────────
 def write_to_db(results: pd.DataFrame):
     try:
-        db = _load_db_helpers()
-        conn = db.get_connection()
+        sys.path.append(os.path.abspath("../etl/db/scripts/utils"))
+        from db_helpers import get_connection
+
+        conn = get_connection()
         cur = conn.cursor()
-        inserted = 0
+
+        tier_col = next(
+            (c for c in results.columns if c.startswith("predicted_") and c.endswith("_tier")),
+            None,
+        )
+        if tier_col is None:
+            print("DB write skipped (no predicted_*_tier column in results).")
+            return
+
+        updated = 0
         for _, row in results.iterrows():
-            if "campaign_id" not in row:
+            if "campaign_id" not in row or pd.isna(row["campaign_id"]):
                 continue
-            target = row.get("target", "ctr")
-            tier_col = f"predicted_{target}_tier"
-            cur.execute("""
-                INSERT INTO predictions
-                    (campaign_id, ad_id, predicted_tier, predicted_metric, confidence_score)
-                VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (campaign_id, predicted_metric)
-                DO UPDATE SET
-                    predicted_tier = EXCLUDED.predicted_tier,
-                    confidence_score = EXCLUDED.confidence_score
-            """, (
-                int(row["campaign_id"]),
-                int(row["ad_id"]) if pd.notna(row.get("ad_id")) else None,
-                row.get(tier_col),
-                target,
-                float(row["confidence_score"]),
-            ))
-            inserted += 1
+            metric = row.get("target", "ctr")
+            if hasattr(metric, "item"):
+                metric = metric.item()
+            metric = str(metric)
+            tier_val = row[tier_col]
+            if hasattr(tier_val, "item"):
+                tier_val = tier_val.item()
+            tier_str = str(tier_val)
+            cur.execute(
+                """
+                UPDATE predictions
+                SET predicted_tier = %s,
+                    confidence = %s
+                WHERE campaign_id = %s
+                  AND predicted_metric = %s
+                """,
+                (
+                    tier_str,
+                    float(row["confidence_score"]),
+                    int(row["campaign_id"]),
+                    metric,
+                ),
+            )
+            updated += cur.rowcount
+
         conn.commit()
         cur.close()
         conn.close()

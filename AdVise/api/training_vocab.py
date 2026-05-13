@@ -7,14 +7,13 @@ from campaign_intent import normalize_intent
 
 POOL_INTENTS = ("sales", "awareness", "traffic", "leads", "engagement")
 POOL_PRODUCT_TYPES = (
+    "beauty",
+    "education",
     "electronics",
     "fashion",
-    "food",
-    "beauty",
-    "fitness",
     "finance",
-    "travel",
-    "education",
+    "fitness",
+    "food",
     "home",
     "software",
 )

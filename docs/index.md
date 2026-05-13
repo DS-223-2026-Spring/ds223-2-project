@@ -4,6 +4,7 @@ This project uses Docker and Docker Compose to connect **AdVise** services: Post
 
 ## Documentation pages
 
+- [Database ERD](erd.md) — schema diagram from `AdVise/etl/db/sql/schema.sql`
 - [API (FastAPI entry and routes)](api.md) — `main` and related modules
 - [API models (SQLAlchemy)](api_models.md) — database model definitions
 - [Streamlit application](app.md) — `app` package reference

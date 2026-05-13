@@ -25,6 +25,7 @@ theme:
 
 nav:
   - Home: index.md
+  - "Database ERD": erd.md
   - API: api.md
   - "API (models)": api_models.md
   - "API v1 (examples)": api/v1-endpoints.md
@@ -53,7 +54,12 @@ plugins:
 markdown_extensions:
   - admonition
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        # Use fence_code_format so Material initializes Mermaid (fence_div_format renders as inert text).
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - tables
   - toc:
       permalink: true

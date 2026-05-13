@@ -72,19 +72,53 @@ with st.container(border=True):
 
     with col1:
         campaign_name = st.text_input("Campaign Name")
-        budget        = st.number_input("Budget ($)", min_value=0)
+        budget        = st.number_input(
+            "Budget ($)",
+            min_value=1,
+            value=500,
+            help="Must be > 0 if your database applies the `budget_positive` check.",
+        )
         platform      = st.selectbox("Platform", enums["platforms"])
 
     with col2:
-        campaign_intent      = st.selectbox("Campaign Intent", enums["campaign_intents"])
-        cta_type             = st.selectbox("CTA Type", enums["cta_types"])
-        audience_temperature = st.selectbox("Audience Temperature", enums["audience_temperature"])
-        product_type         = st.selectbox("Product Type", enums.get("product_types", ["software"]))
+        campaign_intent = st.selectbox("Campaign Intent", enums["campaign_intents"])
+        cta_type = st.selectbox("CTA Type", enums["cta_types"])
+        product_type = st.selectbox("Product Type", enums.get("product_types", ["software"]))
 
     with col3:
-        duration      = st.number_input("Duration (days)", min_value=1)
-        device        = st.selectbox("Device", enums["devices"])
-        customer_type = st.selectbox("Customer Type", enums["customer_types"])
+        duration = st.number_input("Duration (days)", min_value=1)
+        device = st.selectbox("Device", enums["devices"])
+
+st.divider()
+
+# ── Step 2b: Audience segment (passed to /v1/predictions/preview) ─────────────
+st.markdown("### Step 2b — Audience segment")
+st.caption(
+    "Values come from **/v1/meta/enums** (training vocabulary). "
+    "They map to `audience_temperature`, `customer_type`, `audience_age`, `audience_gender`, "
+    "`audience_location`, `audience_interests`, and `career` in the preview payload."
+)
+
+_age_opts = enums.get("age_bands") or ["25-34"]
+_gender_opts = enums.get("genders") or ["male", "female"]
+_region_opts = enums.get("regions") or ["US"]
+_interest_opts = enums.get("interests") or ["tech"]
+_career_opts = enums.get("careers") or ["professional"]
+
+with st.container(border=True):
+    a1, a2, a3 = st.columns(3, gap="large")
+    with a1:
+        audience_age = st.selectbox("Age band", _age_opts)
+        audience_gender = st.selectbox("Gender", _gender_opts)
+        audience_temperature = st.selectbox(
+            "Audience temperature", enums["audience_temperature"]
+        )
+    with a2:
+        audience_location = st.selectbox("Location / region", _region_opts)
+        audience_interests = st.selectbox("Interests", _interest_opts)
+        customer_type = st.selectbox("Customer type", enums["customer_types"])
+    with a3:
+        career = st.selectbox("Career", _career_opts)
 
 st.divider()
 
@@ -100,11 +134,15 @@ with st.container(border=True):
         st.metric("Budget", f"${budget:,.0f}")
         st.metric("Duration", f"{duration} days")
     with c3:
-        st.metric("Audience", audience_temperature)
         st.metric("CTA", cta_type)
+        st.metric("Product", product_type)
     with c4:
         st.metric("Device", device)
-        st.metric("Customer", customer_type)
+        st.metric("Duration", f"{duration} d")
+    st.markdown(
+        f"**Audience** — temp: **{audience_temperature}**, customer: **{customer_type}**; "
+        f"{audience_age}, {audience_gender}, {audience_location}, {audience_interests}, {career}"
+    )
 
 st.divider()
 
@@ -129,23 +167,29 @@ if analyze_clicked:
             "budget":               float(budget),
             "duration_days":        int(duration),
             "creative_count":       min(3, len(uploaded_files)),
+            "audience_age":         audience_age,
+            "audience_gender":      audience_gender,
+            "audience_location":   audience_location,
+            "audience_interests":   audience_interests,
+            "career":               career,
         }
 
         campaign_save_payload = {
-            "company": campaign_name,
-            "campaign_type": campaign_intent,
+            "campaign_name": campaign_name.strip(),
+            "campaign_intent": campaign_intent,
             "platform": platform,
             "budget": float(budget),
             "duration_days": int(duration),
-            "campaign_intent": campaign_intent,
             "product_type": product_type,
+            "cta_type": cta_type,
+            "audience_age": audience_age,
+            "audience_gender": audience_gender,
+            "audience_location": audience_location,
+            "audience_interests": audience_interests,
+            "audience_temperature": audience_temperature,
+            "customer_type": customer_type,
+            "career": career,
         }
-
-        first = uploaded_files[0]
-        if first.type and first.type.startswith("image/"):
-            payload["creative_image_base64"] = base64.standard_b64encode(
-                first.getvalue()
-            ).decode("ascii")
 
         with st.status("Processing campaign prediction...", expanded=True):
             st.write("Saving campaign configuration to PostgreSQL.")
@@ -153,9 +197,27 @@ if analyze_clicked:
             saved_campaign = create_campaign(campaign_save_payload)
 
             if "error" in saved_campaign:
-                st.warning(f"Campaign was not saved to DB: {saved_campaign['error']}")
+                err = saved_campaign["error"]
+                if isinstance(err, list):
+                    err = "; ".join(
+                        str(e.get("msg", e)) if isinstance(e, dict) else str(e) for e in err
+                    )
+                st.warning(f"Campaign was not saved to DB: {err}")
             else:
-                st.success(f"Campaign saved to DB with ID {saved_campaign['campaign_id']}.")
+                payload["campaign_id"] = int(saved_campaign["campaign_id"])
+                payload["ad_id"] = int(saved_campaign["ad_id"])
+                st.success(
+                    "Campaign saved — "
+                    f"campaign_id={saved_campaign['campaign_id']}, "
+                    f"audience_id={saved_campaign['audience_id']}, "
+                    f"ad_id={saved_campaign['ad_id']}."
+                )
+
+            first = uploaded_files[0]
+            if first.type and first.type.startswith("image/"):
+                payload["creative_image_base64"] = base64.standard_b64encode(
+                    first.getvalue()
+                ).decode("ascii")
 
             st.write("Validating campaign payload for /v1/predictions/preview (JSON).")
 
