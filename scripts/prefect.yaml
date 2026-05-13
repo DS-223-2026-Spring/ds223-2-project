@@ -1,0 +1,17 @@
+name: advise-prefect
+
+deployments:
+  - name: docker-compose-manager
+    entrypoint: scripts/docker_compose_manager.py:compose_flow
+    work_pool:
+      name: advise-pool
+
+  - name: docker-compose-recovery
+    entrypoint: scripts/safe_compose_up.py:safe_compose_up_flow
+    work_pool:
+      name: advise-pool
+
+  - name: auto-db-update
+    entrypoint: scripts/auto_db_update.py:auto_db_update_flow
+    work_pool:
+      name: advise-pool

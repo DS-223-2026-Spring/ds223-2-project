@@ -10,6 +10,12 @@ Set **`ADVISE_SKIP_PREFECT_CREATIVE=1`** on **`back`** to bypass Prefect for deb
 
 ---
 
+## Repo-level deployments (`scripts/prefect.yaml`)
+
+Orchestration for **Docker / ETL** (not the FastAPI preview) lives under **`scripts/`**. Declared deployments include compose helpers and **`auto-db-update`** (ETL refresh + API restart). They only appear in the Prefect UI after **`prefect deploy --prefect-file scripts/prefect.yaml --all`**. Details: [Scripts](../scripts.md).
+
+---
+
 ## DS batch pipeline (PostgreSQL writes)
 
 - Flow module: `AdVise/ds/Feature_extraction_automatation_pipelines.py`
