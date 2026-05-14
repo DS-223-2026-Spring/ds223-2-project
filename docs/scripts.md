@@ -11,7 +11,7 @@ cd /path/to/repo
 python3 scripts/export_openapi.py
 ```
 
-See also [API / OpenAPI refresh](api/README.md).
+See also [API / OpenAPI refresh](api/README.md) and [Prefect orchestration](api/prefect-orchestration.md) § *Root scripts* for how Prefect deployments relate when you add them.
 
 ## Prefect (`prefect.yaml`)
 
