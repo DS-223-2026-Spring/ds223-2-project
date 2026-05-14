@@ -1,8 +1,13 @@
-# Database ERD (live + training)
+# Database ERD — live tables + training dataset
 
-Entity-relationship view of tables in **`AdVise/etl/db/sql/schema.sql`**. See also [Project structure](project-structure.md) for Compose and env context.
+The PostgreSQL schema behind AdVise. Two logical groups live in the same database:
 
-**Rendering the diagram:** In **MkDocs** (`mkdocs serve` / `mkdocs build`), the Mermaid block below should draw as a diagram when **`fence_code_format`** is set for the `mermaid` custom fence in **`mkdocs.yaml`** (see [Material: Diagrams](https://squidfunk.github.io/mkdocs-material/reference/diagrams/)). The **Cursor / VS Code Markdown preview** often shows Mermaid as a single line of code; use the **ASCII ERD** in that case, or open the built **`site/erd/index.html`** in a browser.
+- **Live app tables** — `campaigns`, `ads`, `audience`, `predictions`. Populated by the API (`POST /v1/campaigns/`, `POST /v1/predictions/preview`) and seeded with synthetic rows by the one-shot ETL container `etl_db`.
+- **Offline training table** — `training_dataset`. A wide fact table used by `train.py`; **no foreign keys** to the live tables.
+
+All DDL is in `AdVise/etl/db/sql/schema.sql` and applied by the `etl_db` Compose service before `back` boots. See [Orchestration § ETL pipeline](orchestration.md#5-etl-pipeline-etl_db) for how the schema is built and how synthetic rows are populated.
+
+**Rendering the diagram:** In **MkDocs** (`mkdocs serve` / `mkdocs build`), the Mermaid block below renders as a diagram via the `mermaid` custom fence in `mkdocs.yaml` (see [Material: Diagrams](https://squidfunk.github.io/mkdocs-material/reference/diagrams/)). The **Cursor / VS Code Markdown preview** often shows Mermaid as a single line of code; use the **ASCII ERD** in that case, or open the built `site/erd/index.html` in a browser.
 
 ## ASCII ERD (always readable)
 

@@ -27,20 +27,11 @@ theme:
 
 nav:
   - Home: index.md
-  - "Project structure": project-structure.md
-  - "Database ERD": erd.md
+  - App: app.md
   - API: api.md
-  - "API (models)": api_models.md
-  - "API v1 (examples)": api/v1-endpoints.md
-  - "API / OpenAPI refresh": api/README.md
-  - "Prefect orchestration": api/prefect-orchestration.md
-  - "Endpoint spec alignment": api/endpoint-spec-alignment.md
-  - Streamlit app: app.md
-  - ETL: etl.md
-  - "DS models & inference": ds-models.md
-  - Scripts: scripts.md
-  - Demo: demo.md
-  - API Assumptions: api_assumptions.md
+  - "Data Science": ds-models.md
+  - "Database ERD": erd.md
+  - Orchestration: orchestration.md
 
 plugins:
   - search

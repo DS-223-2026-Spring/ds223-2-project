@@ -1,42 +1,57 @@
 # AdVise
 
-Dockerized stack: **PostgreSQL**, one-shot **ETL** (`AdVise/etl/db`), **FastAPI** (`AdVise/api`), **Streamlit** (`AdVise/app`), optional **pgAdmin**. Source: **[github.com/DS-223-2026-Spring/ds223-2-project](https://github.com/DS-223-2026-Spring/ds223-2-project)**. Default **`docker compose up --build`** waits for **`etl_db`** to finish before starting **`back`** and **`front`**.
+**AdVise** is an AI-powered marketing-analytics platform that predicts the potential success of an advertising campaign **before** it goes live. The user supplies campaign goal, audience, budget, and creative; AdVise returns a tier prediction (`low` / `medium` / `high`) on the metric that matches the campaign's intent — `CTR`, `conversion_rate`, or `reach_score`.
 
-## Documentation map
+The stack is a five-service Dockerized application, each component is documented on its own page:
 
-| Topic | Page |
-|-------|------|
-| Repo tree, Compose order, env vars | [Project structure](project-structure.md) |
-| Database tables + ERD | [Database ERD](erd.md) |
-| FastAPI entry + mkdocstrings | [API](api.md) |
-| SQLAlchemy models | [API models](api_models.md) |
-| **`/v1/*`** JSON examples | [API v1 (examples)](api/v1-endpoints.md) |
-| OpenAPI export | [API / OpenAPI refresh](api/README.md) |
-| Prefect + creative preview | [Prefect orchestration](api/prefect-orchestration.md) |
-| Stakeholder spec notes | [Endpoint spec alignment](api/endpoint-spec-alignment.md) |
-| Streamlit pages | [Streamlit app](app.md) |
-| ETL steps + `data_raw` | [ETL](etl.md) |
-| **`train.py`**, joblib, live inference | [DS models & inference](ds-models.md) |
-| Root **`scripts/`** | [Scripts](scripts.md) |
-| Demo talking points | [Demo](demo.md) |
-| Legacy assumptions tracker | [API assumptions](api_assumptions.md) |
+| Component | What it is | Page |
+|-----------|------------|------|
+| **App** | Streamlit frontend — the campaign form, preview, and result charts the user sees. | [App](app.md) |
+| **API** | FastAPI backend — `/v1` REST endpoints, Swagger docs, model serving. | [API](api.md) |
+| **Data Science** | Training pipeline (`train.py`), the three tier classifiers (`model_ctr`, `model_conversion_rate`, `model_reach_score`) and live inference. | [Data Science](ds-models.md) |
+| **Database** | PostgreSQL: live tables `campaigns` / `ads` / `audience` / `predictions` plus offline `training_dataset`. | [Database ERD](erd.md) |
+| **Orchestration** | Prefect — API-side creative-feature extraction, DS batch flow, and Docker/ETL automation under `scripts/`. | [Orchestration](orchestration.md) |
 
-The file **`index.html`** in this folder is a static page you can open directly; MkDocs builds from **`index.md`** and will not treat **`index.html`** as the site home when **`index.md`** exists.
+## Quick start
 
-## How it works (slides)
+From the repository root:
 
-[End-to-end tutorial (slides)](https://hovhannisyan91.github.io/DS223_Group_Project/#/title-slide).
+```bash
+docker compose up --build
+```
 
-## Services (default Compose)
+Compose waits for `etl_db` to finish (one-shot loader) before it starts `back` (API) and `front` (UI). Defaults:
 
-| Service | Role |
-|---------|------|
-| **`db`** | PostgreSQL 17; data dir **`./postgres_data`**. |
-| **`etl_db`** | One-shot: **`schema.sql`** → preprocessing → **`training_dataset`** → synthetic live tables. |
-| **`back`** | FastAPI on **8000** in the network, **8008** on the host; **`/docs`** Swagger. |
-| **`front`** | Streamlit on **8501**; calls **`back`** via **`API_URL`**. |
-| **`pgadmin`** | Web UI for Postgres (**`PGADMIN_PORT`**, default **5050**). |
-| **`ds_batch_visuals`** (profile) | Optional: **`predict.py`** + **`generate_visuals.py`** into **`AdVise/ds/outputs`**. |
-| **`ds`** (profile) | Optional Jupyter under **`AdVise/`**. |
+| Service | Port (host) | Purpose |
+|---------|-------------|---------|
+| `db` | `5432` | PostgreSQL 17 (data dir `./postgres_data`). |
+| `etl_db` | — | One-shot: `schema.sql` → preprocessing → `training_dataset` → synthetic live rows. |
+| `back` | `8008` | FastAPI; Swagger UI at <http://localhost:8008/docs>. |
+| `front` | `8501` | Streamlit UI at <http://localhost:8501>. |
+| `pgadmin` | `5050` | Optional Postgres web UI. |
 
-Build the doc site from the repo root: **`mkdocs serve`** or **`mkdocs build`** (see **`mkdocs.yaml`**).
+## The campaign-intent → metric mapping
+
+A single preview returns **one** tier prediction. Which metric is chosen depends on the campaign's intent (canonical mapping in `AdVise/api/campaign_intent.py`):
+
+| Campaign intent | Target metric |
+|-----------------|---------------|
+| `awareness` | `reach_score` |
+| `traffic`, `engagement` | `ctr` |
+| `sales`, `leads`, `conversion`, `lead_generation` | `conversion_rate` |
+| unknown / other | `ctr` (default) |
+
+This is the contract that the **API**, the **Data Science** models, and the **App** all agree on. See each component's page for details.
+
+## Team
+
+| Name | Role |
+|------|------|
+| Natali Minasyan | Project / Product Manager |
+| Milena Sargsyan | Data Scientist |
+| Hayk Gevorgyan | Backend Developer (FastAPI) |
+| Emilya Sepoyan | Database Developer (PostgreSQL) |
+| Rita Chamiyan | Frontend Developer (Streamlit) |
+| Nare Kechechyan | Orchestration (Prefect) |
+
+Source: <https://github.com/DS-223-2026-Spring/ds223-2-project>

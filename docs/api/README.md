@@ -1,23 +1,24 @@
-# API documentation (canonical)
+# API folder
 
-- **[v1-endpoints.md](v1-endpoints.md)** — Structured spec with JSON request/response examples aligned with FastAPI schemas in `AdVise/api/schema.py`.
-- **[endpoint-spec-alignment.md](endpoint-spec-alignment.md)** — How this repo aligns with older PDF/stakeholder endpoint sheets (multipart preview, Prefect, file paths).
+This folder hosts the **machine-readable OpenAPI schema** for the FastAPI service.
 
-## Refresh OpenAPI JSON
+- **`openapi.json`** — exported snapshot of the live `/openapi.json`. Used by tooling and external consumers; not rendered by MkDocs.
 
-Requires Python dependencies from `AdVise/api/requirements.txt`:
+The human-readable API documentation lives on the top-level [API](../api.md) page.
+
+## Refresh `openapi.json`
+
+Offline (no DB required — sets `SKIP_DB_VERIFY=1`):
 
 ```bash
 cd /path/to/repo
 python3 scripts/export_openapi.py
 ```
 
-Or export from a running API:
+Or from a running API:
 
 ```bash
 curl -s http://localhost:8008/openapi.json | python3 -m json.tool > docs/api/openapi.json
 ```
 
-## Prefect orchestration
-
-See **[prefect-orchestration.md](prefect-orchestration.md)** for creative pipeline retries and how it relates to `/v1/status` (`ADVISE_PREFECT_AVAILABLE`).
+See [API § Refreshing openapi.json](../api.md#refreshing-openapijson) and [Orchestration § scripts/export_openapi.py](../orchestration.md#6-misc-utility-scriptsexport_openapipy).
