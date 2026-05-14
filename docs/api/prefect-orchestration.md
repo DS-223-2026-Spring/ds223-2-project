@@ -1,6 +1,6 @@
 # Prefect — orchestration
 
-Prefect is used in two places: **inside the API** for creative feature extraction on preview, and **optionally at the repo root** for Docker / ETL automation when you add the helper scripts and a deployment manifest.
+Prefect is used in two places: **inside the API** for creative feature extraction on preview, and at the **repo root** under `scripts/` for Docker / ETL automation via three flow modules and a deployment manifest (`prefect.yaml`).
 
 ---
 
@@ -44,20 +44,15 @@ Step ordering remains **sequential** inside the flow: extract must finish before
 
 ## 4. Root `scripts/` and Prefect server deployments
 
-**Current contents of `scripts/`** (see also [Scripts](../scripts.md)):
+The repo ships three Prefect flow modules plus a deployment manifest under **`scripts/`**. Full per-file reference (tasks, retries, CLI usage) lives in [Scripts](../scripts.md); this section is the orchestration-level summary.
 
-| File | Role |
-|------|------|
-| **`export_openapi.py`** | Writes **`docs/api/openapi.json`** from the FastAPI app (offline; sets `SKIP_DB_VERIFY`). |
-
-When your team adds **Prefect deployment** helpers next to it, a typical layout is:
-
-| File | Role |
-|------|------|
-| **`prefect.yaml`** | Declares deployments (names, `entrypoint: scripts/<module>.py:<flow_fn>`, `work_pool`). |
-| **`docker_compose_manager.py`** | Prefect flow wrapping `docker compose` up/down/restart. |
-| **`safe_compose_up.py`** | Retry **`docker compose up -d --build`** with cleanup and logging (stdout/stderr on failure). |
-| **`auto_db_update.py`** | Flow: run **`etl_db`** then **`docker compose restart back`**. |
+| File | Flow | Deployment name | Role |
+|------|------|-----------------|------|
+| **`docker_compose_manager.py`** | `compose_flow` | `docker-compose-manager` | Prefect-wrapped `docker compose` **up / down / restart** (with `ComposeUp` / `ComposeDown` tasks, retries 2 × 5s). Also exposes a local CLI. |
+| **`safe_compose_up.py`** | `safe_compose_up_flow` | `docker-compose-recovery` | Retry `docker compose up -d --build` up to `max_retries` times; runs `down --remove-orphans` between attempts and logs full **stdout / stderr** from Docker on failure. |
+| **`auto_db_update.py`** | `auto_db_update_flow` | `auto-db-update` | Sequential **ETL refresh + API restart**: `docker compose up etl_db` → `docker compose restart back`. |
+| **`prefect.yaml`** | — | — | Declares all three deployments above against work pool `advise-pool`. |
+| **`export_openapi.py`** | — | — | Plain utility (not a flow): writes **`docs/api/openapi.json`** from the FastAPI app with `SKIP_DB_VERIFY=1`. |
 
 ### Registering deployments (Prefect 3)
 
@@ -65,18 +60,29 @@ Point the CLI at your long-running server, then deploy:
 
 ```bash
 export PREFECT_API_URL="http://127.0.0.1:4200/api"   # adjust host/port
-prefect work-pool create advise-pool --type process   # once; skip if pool exists
+prefect work-pool create advise-pool --type process  # once; skip if pool exists
 prefect deploy --prefect-file scripts/prefect.yaml --all
 ```
 
-Start a worker so the work pool becomes **ready** and runs can execute:
+Start a worker so the work pool becomes **ready** and runs can execute (run this from the **repo root** — it's compose's `cwd`):
 
 ```bash
 prefect worker start --pool advise-pool
 ```
 
-Example deployment names (when **`prefect.yaml`** is present): **`docker-compose-manager`**, **`docker-compose-recovery`**, **`auto-db-update`**.
+After this, the Prefect UI lists deployments **`docker-compose-manager`**, **`docker-compose-recovery`**, and **`auto-db-update`**.
+
+### When to pick which flow
+
+- **Routine** stack up / down / restart → **`docker-compose-manager`** (`compose_flow`).
+- **Flaky** bring-up where you want automatic cleanup + retry → **`docker-compose-recovery`** (`safe_compose_up_flow`).
+- **Data refresh** (rebuild Postgres from `data_raw/` and bounce the API) → **`auto-db-update`** (`auto_db_update_flow`).
 
 ### Troubleshooting compose flows
 
-If **`docker compose up`** fails inside a flow, check the **`run_compose`** task logs for **stdout/stderr** (when using the logging-aware `safe_compose_up` implementation). Common causes: missing root **`.env`**, **`etl_db`** failure (see [ETL](../etl.md)), port conflicts, or Docker not running.
+If `docker compose up` fails inside a flow, open the task log:
+
+- **`safe_compose_up.py`** captures and logs Docker's **stdout / stderr** inline (look at the failing `run_compose` task).
+- **`docker_compose_manager.py`** logs the resolved command but streams Docker output to the worker's terminal; re-run locally if you need to see stderr.
+
+Common causes: missing root **`.env`**, **`etl_db`** failure (see [ETL](../etl.md)), port conflicts (5432 / 8008 / 8501), Docker not running, or the worker started from the wrong directory (must be the parent of `scripts/`).
