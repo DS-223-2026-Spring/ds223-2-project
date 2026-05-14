@@ -36,7 +36,7 @@ The entry point and routers:
 
 ::: api.main
 
-## Route groups
+## Route groups (overview)
 
 | Prefix | Source | Notes |
 |--------|--------|-------|
@@ -44,7 +44,7 @@ The entry point and routers:
 | **`POST /v1/predictions/preview`**, **`GET /v1/prediction-runs/{run_id}`** | `routes/predictions_preview.py` | Live preview; optional DB upsert into `ads` / `predictions`. |
 | **`GET /v1/status`**, **`GET /v1/meta/enums`** | `routes/route2.py`, `routes/meta.py` | Health + enum vocabulary (DB-backed where columns exist). |
 | `/campaigns`, `/ads`, ... (no `v1` prefix) | `routes/campaigns.py`, etc. | **Legacy in-memory** demos — keep around for tutorials; production UI should always call `/v1/*`. |
-| `/training_dataset`, `/ext`, core `/route2` | `routen.py`, `training_dataset.py` | Training-data sampling / extensions. |
+| `/training-dataset`, `/ext`, core `/status` | `routen.py`, `training_dataset.py`, `route2.py` | Training-data sampling / extensions / liveness. |
 
 OpenAPI: **`/openapi.json`**. Swagger UI: **`/docs`**. ReDoc: **`/redoc`**.
 
@@ -56,7 +56,7 @@ Mirror the live tables in `AdVise/etl/db/sql/schema.sql` (see [Database ERD](erd
     options:
         show_source: true
 
-## `/v1` endpoints — request/response examples
+## Endpoint reference
 
 Base URLs:
 
@@ -65,9 +65,56 @@ Base URLs:
 | Docker Compose (host machine) | `http://localhost:8008` |
 | Streamlit container → API | `http://back:8000` |
 
-The canonical machine-readable contract is `/openapi.json`. The examples below mirror `AdVise/api/schema.py`.
+The canonical machine-readable contract is `/openapi.json`. The tables and examples below mirror `AdVise/api/schema.py`.
 
-### `GET /v1/status`
+### Endpoint summary
+
+Every route the FastAPI app exposes, at a glance. **Bold rows are the endpoints used by the Streamlit frontend in production.**
+
+| Method | Path | Source | Functionality |
+|--------|------|--------|---------------|
+| GET | `/` | `main.py` | Root pointer to docs (`{"product":"AdVise","docs":"/docs","redoc":"/redoc"}`). |
+| GET | `/status` | `route2.py` | Cheap liveness probe (no DB). Returns `{"product":"AdVise","component":"api","ok":true}`. |
+| **GET** | **`/v1/status`** | **`route2.py`** | **Backend health + upload limits + `prefect_available` flag. Used by the Streamlit connection banner.** |
+| **GET** | **`/v1/meta/enums`** | **`meta.py`** | **Dropdown vocabulary, sourced from `DISTINCT training_dataset` columns with static fallbacks.** |
+| **POST** | **`/v1/predictions/preview`** | **`predictions_preview.py`** | **Run one tier prediction for the metric matching `campaign_intent`; optionally upsert `ads` + `predictions`.** |
+| GET | `/v1/prediction-runs/{run_id}` | `predictions_preview.py` | Replay a preview by `run_id` from the in-process dict. |
+| **GET** | **`/v1/campaigns/`** | **`campaigns_v1.py`** | **List up to 100 campaigns from Postgres.** |
+| **POST** | **`/v1/campaigns/`** | **`campaigns_v1.py`** | **Insert campaign + audience + placeholder ad in one transaction; returns the new IDs.** |
+| GET | `/v1/ads/` | `ads_v1.py` | List up to 100 ads from Postgres. |
+| GET | `/v1/audience/` | `audience_v1.py` | List up to 100 audience rows from Postgres. |
+| GET | `/v1/predictions/` | `predictions_v1.py` | List up to 100 prediction rows from Postgres. |
+| GET / POST / PUT / DELETE | `/campaigns/`, `/campaigns/{id}` | `campaigns.py` | **Legacy** in-memory demo CRUD. Not backed by Postgres. |
+| GET / POST | `/ads/` | `ads.py` | Legacy in-memory demo CRUD. |
+| GET / POST | `/audience/` | `audience.py` | Legacy in-memory demo CRUD. |
+| GET / POST | `/predictions/` | `predictions.py` | Legacy in-memory demo CRUD. |
+| GET / POST | `/training-dataset/` | `training_dataset.py` | Tiny tutorial CRUD seeded with one row. |
+| GET | `/ext/placeholder` | `routen.py` | Placeholder for additional domain routers. |
+| GET | `/docs`, `/redoc`, `/openapi.json` | FastAPI default | Swagger UI / ReDoc / OpenAPI schema. |
+
+The detail sections below walk through the **production `/v1/*`** surface in the order a typical session calls them.
+
+---
+
+### Liveness and health
+
+#### `GET /` — root
+
+Returns links to interactive docs. Useful for a smoke test.
+
+```json
+{ "product": "AdVise", "docs": "/docs", "redoc": "/redoc" }
+```
+
+#### `GET /status` — cheap liveness
+
+Hits no database. Used by Compose health checks / external load balancers that need a sub-millisecond probe.
+
+```json
+{ "product": "AdVise", "component": "api", "ok": true }
+```
+
+#### `GET /v1/status`
 
 **Response `200`**:
 
@@ -87,7 +134,13 @@ The canonical machine-readable contract is `/openapi.json`. The examples below m
 
 In the default Compose stack `ADVISE_PREFECT_AVAILABLE=true` is set on `back`, so `prefect_available` is `true`. Override in `.env` to bypass Prefect (the field is UX-only and affects the creative-extraction wiring only).
 
-### `GET /v1/meta/enums`
+The Streamlit app reads this on every page load — a green **✓ Backend connected** banner means the call returned `200`; anything else flips the UI into degraded mode.
+
+---
+
+### Vocabulary
+
+#### `GET /v1/meta/enums`
 
 Returns the dropdown vocabulary that the Streamlit form should use. Values come from `DISTINCT` queries on `training_dataset` so the UI vocabulary matches what the model was trained on. Columns that are empty fall back to static pools aligned with `AdVise/etl/db/scripts/preprocessing.py`. The `devices` field has no DB column and is always a small static list.
 
@@ -112,7 +165,11 @@ Example (your live values will differ):
 
 Frontend must use key **`audience_temperature`** (singular, not `audience_temperatures`).
 
-### `POST /v1/predictions/preview`
+---
+
+### Predictions
+
+#### `POST /v1/predictions/preview`
 
 The product's headline endpoint. Returns exactly **one** tier prediction on the metric that matches the campaign's intent (see "Single outcome per preview" below).
 
@@ -181,7 +238,16 @@ The product's headline endpoint. Returns exactly **one** tier prediction on the 
 }
 ```
 
-#### Single outcome per preview
+**Status codes:**
+
+| Code | Meaning |
+|------|---------|
+| `200` | Prediction returned. `prediction_id` is `null` when neither `campaign_id` nor `ad_id` were sent. |
+| `400` | `ad_id` not found, or `ad_id` doesn't belong to `campaign_id`. |
+| `422` | Sent only one of `campaign_id` / `ad_id` (must be both or neither). |
+| `500` | Internal — couldn't persist `ads` / `predictions`. Body's `detail` describes the failed step. |
+
+##### Single outcome per preview
 
 `campaign_intent` resolves to **exactly one** `target_metric` + `target_label`. The API loads **one** classifier bundle per metric; a preview scores **only** that metric — **not** CTR, conversion, and reach at once. Canonical mapping in `AdVise/api/campaign_intent.py` (`INTENT_TO_TARGET_METRIC`):
 
@@ -194,21 +260,38 @@ The product's headline endpoint. Returns exactly **one** tier prediction on the 
 
 See [Data Science](ds-models.md) for the model behind each metric.
 
-#### Creative features
+##### Creative features
 
 Pass `creative_image_base64` (first image only). The API decodes a temp file and runs `creative_prefect.extract_creative_for_preview`, which executes the Prefect flow `api-creative-extraction-preview` (with retries). Set `ADVISE_SKIP_PREFECT_CREATIVE=1` on `back` to bypass Prefect for debugging. Without an image, preview falls back to stub creative fields. See [Orchestration](orchestration.md) for the flow details.
 
 Tier scoring uses the joblib models under `AdVise/ds/models` (mounted at `/api/ds_models` on `back`). The legacy `model.pkl` is used only for `ctr` unless `ADVISE_LEGACY_MODEL_ONLY_FOR` is set.
 
-### `GET /v1/prediction-runs/{run_id}`
+##### Persistence rules
 
-Returns the stored preview result for a `run_id` issued by `POST /v1/predictions/preview`. Storage is **in-memory** on the API process (`prediction_runs` dict); restarting the container clears it.
+| `campaign_id` | `ad_id` | Result |
+|---------------|---------|--------|
+| `null` | `null` | Preview-only — no DB write; `prediction_id` is `null` in the response. |
+| set | set | **UPDATE** `ads` with the creative fields (and `creative_url` if provided), then **UPSERT** `predictions` on the `uq_campaign_metric` constraint (`campaign_id`, `predicted_metric`). Repeat previews of the same metric overwrite tier / confidence / `ad_id`. |
+| only one of the two | | `422 Unprocessable Entity`. |
 
-`200` with the same shape as a preview response, or `200` with `status: "failed"` and empty fields when missing.
+The persistence path runs `_persist_ad_and_prediction`, which first verifies the `ad_id` exists and belongs to `campaign_id` before any write — mismatches are rejected with `400`.
 
-### PostgreSQL-backed listings and create
+#### `GET /v1/prediction-runs/{run_id}`
 
-`GET /v1/campaigns/` returns a count + list of `campaigns` rows. Example:
+Replay a preview by the `run_id` issued in `POST /v1/predictions/preview`. Storage is **in-memory** on the API process (`prediction_runs` dict); restarting the container clears it. Always returns `200`:
+
+- When found: same shape as the preview response.
+- When missing: a `PredictionRunResponse` with `status: "failed"`, `predicted_tier: null`, `prediction_confidence: null`, and empty `recommendations` / `input_summary`. The error is conveyed in the body, not the status code.
+
+---
+
+### Campaigns, ads, audience, predictions (PostgreSQL)
+
+The primary product CRUD. All four routers use `database.get_db` (SQLAlchemy session) and the SQL is raw `text(...)` for transparency. List endpoints are capped at **100 rows**.
+
+#### `GET /v1/campaigns/`
+
+Returns a count + list of `campaigns` rows. Example:
 
 ```json
 {
@@ -229,9 +312,88 @@ Returns the stored preview result for a `run_id` issued by `POST /v1/predictions
 }
 ```
 
-`POST /v1/campaigns/` (`CampaignCreateRequest`) inserts **one** `campaigns` row and **one** `audience` row in a **single transaction** (rollback if either fails). Body includes campaign fields (`campaign_name`, `campaign_intent`, `platform`, `budget`, `duration_days`, `product_type`, `cta_type`) plus audience fields aligned with the `audience` table / preview API (`audience_age`, `audience_gender`, `audience_location`, `audience_interests`, `audience_temperature`, `customer_type`, `career`). The response includes `campaign_id`, `audience_id`, and the campaign columns returned from `RETURNING`.
+#### `POST /v1/campaigns/`
 
-Analogous prefixes: `/v1/ads/`, `/v1/audience/`, `/v1/predictions/`. See OpenAPI tags for the full surface.
+Persists a campaign in **one transaction**: insert into `campaigns`, then `audience`, then a **placeholder `ads` row** (with `creative_type='image'`, `aspect_ratio='1:1'`, `copy_text_length=15`, `visual_complexity=0.5`, `has_person=false`, empty URL). The placeholder ad gives the preview endpoint an `ad_id` to update later. Any failure rolls back all three inserts.
+
+**Request body** (`CampaignCreateRequest`) — campaign + audience fields aligned with the `audience` table and the preview API:
+
+```json
+{
+  "campaign_name": "Spring push",
+  "campaign_intent": "awareness",
+  "platform": "instagram",
+  "budget": 500,
+  "duration_days": 7,
+  "product_type": "software",
+  "cta_type": "learn_more",
+  "audience_age": "25-34",
+  "audience_gender": "female",
+  "audience_location": "US",
+  "audience_interests": "tech",
+  "audience_temperature": "cold",
+  "customer_type": "new",
+  "career": "professional"
+}
+```
+
+**Response `200`** (`CampaignCreateResponse`) — the new IDs plus the campaign columns returned from SQL `RETURNING`:
+
+```json
+{
+  "campaign_id": 17,
+  "audience_id": 17,
+  "ad_id": 17,
+  "campaign_name": "Spring push",
+  "campaign_intent": "awareness",
+  "platform": "instagram",
+  "budget": 500.0,
+  "duration_days": 7,
+  "product_type": "software",
+  "cta_type": "learn_more"
+}
+```
+
+**Status codes:** `200` on success, `400` for any database error (constraint violation, type mismatch — `detail` carries the SQL message), `500` for the rare case where the `RETURNING` clause yields no row.
+
+The Streamlit Campaign Input page calls this **before** `POST /v1/predictions/preview` so that the prediction has a real `ad_id` / `campaign_id` to persist against.
+
+#### `GET /v1/ads/`
+
+Returns up to 100 rows from `ads` (`AdListResponse` = `{count, ads: [...]}`). Each row is the full `ads` schema: `ad_id`, `campaign_id`, `creative_type`, `cta_type`, `copy_text_length`, `aspect_ratio`, `visual_complexity`, `has_person`, `creative_url`, `created_at`. Read-only — `ads` rows are created by `POST /v1/campaigns/` (placeholder) and **updated** by `POST /v1/predictions/preview` when `campaign_id` + `ad_id` are supplied.
+
+#### `GET /v1/audience/`
+
+Returns up to 100 rows from `audience` (`AudienceListResponse` = `{count, audience: [...]}`). Each row: `audience_id`, `campaign_id`, `age`, `gender`, `location`, `interests`, `audience_temperature`, `customer_type`, `career`, `created_at`. Read-only — `audience` rows are written by `POST /v1/campaigns/`.
+
+#### `GET /v1/predictions/`
+
+Returns up to 100 rows from `predictions` (`PredictionListResponse` = `{count, predictions: [...]}`). Each row: `prediction_id`, `campaign_id`, `ad_id`, `predicted_metric`, `predicted_tier`, `confidence`, `created_at`. Note the **`uq_campaign_metric` UNIQUE constraint** on `(campaign_id, predicted_metric)` — at most one row per campaign per target metric. Updates flow exclusively through `POST /v1/predictions/preview`.
+
+---
+
+### Legacy in-memory demos (do not use in production)
+
+The non-`v1` routers (`campaigns.py`, `ads.py`, `audience.py`, `predictions.py`, `training_dataset.py`) predate the Postgres-backed `/v1/*` API. They store data in module-level Python dicts that are lost on restart and **don't share state with Postgres**. Keep them around because the tutorial slides reference them; production UI should always call `/v1/*`.
+
+| Method + path | Behaviour |
+|---------------|-----------|
+| `GET /campaigns/` | List the in-memory dict (one seeded row). |
+| `GET /campaigns/{id}` | `200` with that row or `404` if missing. |
+| `POST /campaigns/` | Insert by auto-incrementing the max key in the dict. |
+| `PUT /campaigns/{id}` | Replace by id; `404` if missing. |
+| `DELETE /campaigns/{id}` | Remove by id; returns the deleted row; `404` if missing. |
+| `GET /ads/` | List the in-memory ads dict. |
+| `POST /ads/` | Insert into the in-memory ads dict. |
+| `GET /audience/` | List the in-memory audience dict. |
+| `POST /audience/` | Insert into the in-memory audience dict. |
+| `GET /predictions/` | List the in-memory predictions dict. |
+| `POST /predictions/` | Insert into the in-memory predictions dict. |
+| `GET /training-dataset/` | List one tutorial row. |
+| `POST /training-dataset/` | Append to the tutorial dict. |
+| `GET /ext/placeholder` | Stub for future domain routes — returns `{"message": "..."}`. |
+
+These all use the lightweight Pydantic models from `schema.py` (`CampaignCreate`, `AdCreate`, …) — **not** the `*DBResponse` models the `/v1/*` routes use, so the request/response shapes differ from the Postgres variants on purpose.
 
 ## Refreshing `openapi.json`
 
